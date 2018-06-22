@@ -5,7 +5,7 @@ from time import sleep
 
 sense = SenseHat() # init senseHat
 
-# tuples: (Roll,pitch,yaw) or (DirectionJoyStick)
+# tuples: (Roll,pitch,yaw) or (DirectionJoyStick) ! in Gs
 
 """
 up: 1
@@ -19,6 +19,7 @@ R = [255, 0, 0]  # Red
 G = [127, 255, 0] # Green
 O = [255, 255, 255]  # White
 
+# Image blanche
 display =	[O,O,O,O,O,O,O,O,
 			O,O,O,O,O,O,O,O,
 			O,O,O,O,O,O,O,O,
@@ -27,17 +28,48 @@ display =	[O,O,O,O,O,O,O,O,
 			O,O,O,O,O,O,O,O,
 			O,O,O,O,O,O,O,O,
 			O,O,O,O,O,O,O,O]
+# Image cadenas verrouiller
+locked =	[O,O,O,O,O,O,O,O,
+			O,O,R,R,R,R,O,O,
+			O,O,R,O,O,R,O,O,
+ 			O,O,R,O,O,R,O,O,
+			O,R,R,R,R,R,R,O,
+			O,R,R,R,R,R,R,O,
+			O,R,R,R,R,R,R,O,
+			O,R,R,R,R,R,R,O]
+# Image cadenas déverrouiller
+unlocked =	[O,O,G,G,G,G,O,O,
+			O,O,G,O,O,G,O,O,
+			O,O,G,O,O,G,O,O,
+ 			O,O,O,O,O,G,O,O,
+			O,G,G,G,G,G,G,O,
+			O,G,G,G,G,G,G,O,
+			O,G,G,G,G,G,G,O,
+			O,G,G,G,G,G,G,O]
+"""
+	Pour déverrouiller, appuyer sur le joystick
+"""
+sense.set_pixels(locked)
+event = sense.stick.wait_for_event()
+while event.action != ACTION_RELEASED:
+	event = sense.stick.wait_for_event()
 
+
+"""
+	affiche le nombre de position correcte à fournir
+"""
 j=0
-for k in sequence: # remplir le display d'aussi bcp de nombres que d'element dans la sequence
+for k in sequence:
 	display[j] = R
 	j=j+1
-
 sense.set_pixels(display)
 sense.low_light = True
 
 threshold = 0.12 # pour le bruit/imperfections
 
+"""
+	renvoie vrai si x€[value-threshold,value+treshold] sinon faux
+"""
 def close(x,value,threshold):
 	if (x > (value-threshold) and x < (value+threshold)):	
 		return True
@@ -46,10 +78,14 @@ def close(x,value,threshold):
 
 sense.set_imu_config(False, False, True) # active seulement l'accelerometre
 
-notUnlocked = True
+
+"""
+	Corps central du script
+"""
+unlocked_bool = False
 i = 0 # position dans la sequence
 print("Pivoter puis valider la position")
-while notUnlocked:
+while not unlocked_bool:
 	event = sense.stick.wait_for_event()
 	if event.action != ACTION_RELEASED: # seulement quand on appuye sur le joystick
 		acc = sense.get_accelerometer_raw()
@@ -70,8 +106,13 @@ while notUnlocked:
 			sense.set_pixels(display)
 			print("on recommence...")
 	if (i >= len(sequence)):
-		notUnlocked = False # pour sortir de la boucle quand la sequence à bien été reproduite
+		unlocked_bool = True # pour sortir de la boucle quand la sequence à bien été reproduite
 
-sense.show_message("Secret message", text_colour=[255, 0, 0]) # Message secret s'affiche sur le panel LED
+"""
+	Affiche un cadenas déverrouiller et ensuite le message secret
+"""
+sense.set_pixels(unlocked)
+sleep(2)
+sense.show_message("Message", text_colour=[255, 0, 0])
 
 
