@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from sense_hat import SenseHat, ACTION_PRESSED, ACTION_RELEASED, ACTION_HELD
 import os.path
 import json
