@@ -91,9 +91,9 @@ def translate(number):
 	else:
 		return "up"
 
-def reset_display(seq):
+def reset_display():
 	j = 0
-	for k in seq: # remettre le display 
+	for k in sequence: # remettre le display 
 		display[j] = R
 		j=j+1
 	sense.set_pixels(display)
@@ -121,7 +121,7 @@ while not unlocked_bool:
 			if (len(sequence[i]) == 1 and translate(sequence[i]) == event.direction):
 				i = advance(i)
 			else:
-				i = reset_display(sequence)
+				i = reset_display()
 		else:
 			acc = sense.get_accelerometer_raw()
 			x = acc['x']
@@ -130,7 +130,7 @@ while not unlocked_bool:
 			if (close(x,sequence[i][0],threshold) and close(y,sequence[i][1],threshold) and close(z,sequence[i][2],threshold)): # toutes les directions doivent etre bonnes
 				i = advance(i)
 			else:
-				i = reset_display(sequence)
+				i = reset_display()
 	if (i >= len(sequence)):
 		unlocked_bool = True # pour sortir de la boucle quand la sequence à bien été reproduite
 
