@@ -4,6 +4,8 @@ from sense_hat import SenseHat, ACTION_PRESSED, ACTION_HELD, ACTION_RELEASED
 from time import sleep
 
 sense = SenseHat() # init senseHat
+sense.set_imu_config(False, False, True) # active seulement l'accelerometre
+threshold = 0.2 # pour le bruit/imperfections
 
 # tuples: (Roll,pitch,yaw) or (DirectionJoyStick) ! in Gs
 
@@ -13,7 +15,7 @@ down: 2
 left: 3
 right: 4
 """
-sequence = [(1.0,0.0,0.0),(0.0,1.0,0.0),(1.0,0.0,0.0),(1.0,0.0,0.0)]
+sequence = [(1.0,0.0,0.0),(0.0,1.0,0.0),(1,)]
 
 R = [255, 0, 0]  # Red
 G = [127, 255, 0] # Green
@@ -65,7 +67,6 @@ for k in sequence:
 sense.set_pixels(display)
 sense.low_light = True
 
-threshold = 0.12 # pour le bruit/imperfections
 
 """
 	renvoie vrai si x€[value-threshold,value+treshold] sinon faux
@@ -75,8 +76,36 @@ def close(x,value,threshold):
 		return True
 	else:
 		return False
+"""
+	Renvoie la direction correspondante au number
+"""
+def translate(number):
+	if (number == 1):
+		return "up"
+	elif (number == 2):
+		return "down"
+	elif (number == 3):
+		return "left"
+	elif (number == 4):
+		return "right"
+	else:
+		return "up"
 
-sense.set_imu_config(False, False, True) # active seulement l'accelerometre
+def reset_display(seq):
+	j = 0
+	for k in seq: # remettre le display 
+		display[j] = R
+		j=j+1
+	sense.set_pixels(display)
+	print("on recommence...")
+	return 0
+
+def advance(i):
+	display[i] = G
+	sense.set_pixels(display)
+	p = i+1
+	print("bravo! (%s/%s)"%(str(p),str(len(sequence))))
+	return p
 
 
 """
@@ -84,27 +113,24 @@ sense.set_imu_config(False, False, True) # active seulement l'accelerometre
 """
 unlocked_bool = False
 i = 0 # position dans la sequence
-print("Pivoter puis valider la position")
+print("Faites vos combinaisons")
 while not unlocked_bool:
 	event = sense.stick.wait_for_event()
 	if event.action != ACTION_RELEASED: # seulement quand on appuye sur le joystick
-		acc = sense.get_accelerometer_raw()
-		x = acc['x']
-		y = acc['y']
-		z = acc['z']
-		if (close(x,sequence[i][0],threshold) and close(y,sequence[i][1],threshold) and close(z,sequence[i][2],threshold)): # toutes les directions doivent etre bonnes
-			display[i] = G
-			sense.set_pixels(display)
-			i = i+1
-			print("bravo! (%s/%s)"%(str(i),str(len(sequence))))
+		if event.direction != "middle":
+			if (len(sequence[i]) == 1 and translate(sequence[i]) == event.direction):
+				i = advance(i)
+			else:
+				i = reset_display(sequence)
 		else:
-			i = 0
-			j = 0
-			for k in sequence: # remettre le display 
-				display[j] = R
-				j=j+1
-			sense.set_pixels(display)
-			print("on recommence...")
+			acc = sense.get_accelerometer_raw()
+			x = acc['x']
+			y = acc['y']
+			z = acc['z']
+			if (close(x,sequence[i][0],threshold) and close(y,sequence[i][1],threshold) and close(z,sequence[i][2],threshold)): # toutes les directions doivent etre bonnes
+				i = advance(i)
+			else:
+				i = reset_display(sequence)
 	if (i >= len(sequence)):
 		unlocked_bool = True # pour sortir de la boucle quand la sequence à bien été reproduite
 
