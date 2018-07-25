@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from sense_hat import SenseHat, ACTION_PRESSED, ACTION_RELEASED, ACTION_HELD
+from sense_emu import SenseHat, ACTION_PRESSED, ACTION_RELEASED, ACTION_HELD
 import os.path
 import json
 import ast
@@ -90,6 +90,7 @@ def decrypt(fichier):
     global code_index, code_combinaison, message, locked, unlocked
 
     sense.set_pixels(locked)
+    print("Appuyer sur le joystick pour déverrouiller")
     event = sense.stick.wait_for_event()
     while event.action != ACTION_RELEASED:
         event = sense.stick.wait_for_event()
@@ -100,7 +101,7 @@ def decrypt(fichier):
     sense.set_pixels(display)
     sense.set_imu_config(False, False, True) # active seulement l'accelerometre
     locked = True
-    print("Pivoter puis valider la position")
+    print("Pivoter puis valider la position ou diriger le joystick dans une direction")
     while locked:
         event = sense.stick.wait_for_event()
         if event.action == ACTION_PRESSED:
@@ -123,7 +124,7 @@ def decrypt(fichier):
                         and close(z,code_combinaison[code_index]['z'])): # toutes les directions doivent etre bonnes
                     code_index = advance(code_index)
                 else:
-                    code_index = reset_display()
+                	code_index = reset_display()
         if code_index >= len(code_combinaison):
             locked = False
     sense.set_pixels(unlocked)
@@ -181,6 +182,7 @@ if os.path.isfile("secretKey.txt"):
 else:
     fichier = open("secretKey.txt", "w")
 
+    print("Pencher puis valider les position en appuyant sur le joystick ou pousser le joystick dans une direction (5 positions à données)")
     sense.stick.direction_middle = pushed_middle
     sense.stick.direction_up = pushed_up
     sense.stick.direction_down = pushed_down
