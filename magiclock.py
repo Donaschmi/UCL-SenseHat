@@ -110,6 +110,9 @@ def decrypt(fichier):
                 else:
                     code_index = reset_display()
             else:
+                if not type(code_combinaison[code_index]) is dict:
+                    code_index = reset_display()
+                    continue
 
                 acc = sense.get_accelerometer_raw()
                 x = acc['x']
