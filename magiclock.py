@@ -205,7 +205,9 @@ def decrypt(secret_file):
     global code_index, code_combinaison, code_num,  message, locked, unlocked
 
     sense.set_pixels(locked)
+
     # Wait for an event in order to begin
+    print("Appuyer sur le joystick pour déverrouiller")
     event = sense.stick.wait_for_event()
     while event.action != ACTION_RELEASED:
         event = sense.stick.wait_for_event()
@@ -218,7 +220,7 @@ def decrypt(secret_file):
 
     locked = True
 
-    print("Pivoter puis valider la position")
+    print("Pivoter puis valider la position ou diriger le joystick dans une direction")
     while locked:
         event = sense.stick.wait_for_event()
 
