@@ -6,7 +6,8 @@ import ast
 from time import sleep
 
 code_index = 0
-code_combinaison = [None]*5
+code_combinaison = [None]*64
+code_num = 0
 
 message = ""
 
@@ -44,9 +45,11 @@ def close(x, value):
 
 
 def isValid(fichier):
-    global code_combinaison, code_index, message
+    global code_combinaison, code_index, code_num, message
     line = fichier.read().split('\n')
-    for i in range(5):
+    code_num = len(line) - 1
+    code_combinaison = [None] * code_num
+    for i in range(code_num):
         if not line[i].isdigit():
             h = ast.literal_eval(line[i])
             if type(h) is dict:
@@ -58,7 +61,7 @@ def isValid(fichier):
             code_combinaison[code_index] = int(line[i])
         code_index += 1
     code_index = 0
-    message = line[5]
+    message = line[len(line) - 1]
     return True
 
 def translate(number):
@@ -74,7 +77,7 @@ def translate(number):
         return "up"
 
 def reset_display():
-    for i in range(5):
+    for i in range(code_num):
         display[i] = R
     sense.set_pixels(display)
     return 0
@@ -83,11 +86,11 @@ def advance(i):
     display[i] = G
     sense.set_pixels(display)
     p = i + 1
-    print("Bravo! (%s/5)"%(str(p)))
+    print("Bravo! (%s/%s)"%(str(p), str(len(code_combinaison))))
     return p
 
 def decrypt(fichier):
-    global code_index, code_combinaison, message, locked, unlocked
+    global code_index, code_combinaison, code_num,  message, locked, unlocked
 
     sense.set_pixels(locked)
     event = sense.stick.wait_for_event()
@@ -95,7 +98,7 @@ def decrypt(fichier):
         event = sense.stick.wait_for_event()
 
 
-    for i in range(5):
+    for i in range(code_num):
         display[i] = R
     sense.set_pixels(display)
     sense.set_imu_config(False, False, True) # active seulement l'accelerometre
@@ -162,17 +165,12 @@ def pushed_right(event):
 
 def encrypt(fichier):
     global code_combinaison
-    while code_index < 5:
-        pass
-    for i in range(5):
-        fichier.write(str(code_combinaison[i])+ '\n')
 
-def type_message(fichier):
     message = input("Entrez votre message secret : \n")
+    for i in range(len(code_combinaison)):
+        if not code_combinaison[i] is None:
+            fichier.write(str(code_combinaison[i])+ '\n')
     fichier.write(str(message))
-
-
-
 
 if os.path.isfile("secretKey.txt"):
     fichier = open("secretKey.txt", "r")
@@ -187,5 +185,4 @@ else:
     sense.stick.direction_right = pushed_right
     sense.stick.direction_left = pushed_left
     encrypt(fichier)
-    type_message(fichier)
     fichier.close()
