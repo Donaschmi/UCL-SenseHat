@@ -5,16 +5,24 @@ import json
 import ast
 from time import sleep
 
+# Indicate which combinaison is currently beeing tried
 code_index = 0
+
+# Define the combinaisons variable as a list of element (dict or int)
 code_combinaison = [None]*64
+
+# Number of combinaisons
 code_num = 0
 
+# Our secret message
 message = ""
 
+# Color code
 R = [255, 0, 0]
 G = [127, 255, 0]
 O = [255, 255, 255]
 
+# Some image to display
 locked=[O,O,O,O,O,O,O,O,
         O,O,R,R,R,R,O,O,
         O,O,R,O,O,R,O,O,
@@ -33,38 +41,102 @@ unlocked=[O,O,G,G,G,G,O,O,
         O,G,G,G,G,G,G,O,
         O,G,G,G,G,G,G,O]
 
-
+# The default display screen
 display = [O] * 64
 
+# Setup SenseHat
 sense = SenseHat()
 sense.low_light = True
 
-def close(x, value):
+def close_enough(x, value):
+    """
+    Checks if the current value is close enough to x
+
+    Parameters
+    ----------
+    x: float
+        The value we want to compare to
+    value: float
+        The value we want to compare
+
+    Returns
+    -------
+    -: bool
+        True if value is close enough to x with a threshold factor of 0.12, else False
+    """
     threshold = 0.12
     return  x > (value - threshold) and x < (value + threshold)
 
 
-def isValid(fichier):
+def isValid(secret_file):
+    """
+    Checks if the secret_file given is of a valid form
+
+    The secret_file should contain len(file) - 1 lines containing either a dictionnary or an integer
+    and a one line message before the EOF.
+
+    Fill the global code_combinaison with the lines contained in the secret_file
+    Fill the global message with the last line of the secret_file
+
+    Parameters
+    ----------
+    secret_file: File
+        An opened secret_file in reading mode
+
+    Returns
+    -------
+    -:bool
+        True if each line of the secret_file except the last one is either a dictionnary or an integer,
+        else False
+    """
     global code_combinaison, code_index, code_num, message
-    line = fichier.read().split('\n')
-    code_num = len(line) - 1
+    # Contains each line of the secret_file
+    lines = secret_file.read().split('\n')
+
+    code_num = len(lines) - 1
     code_combinaison = [None] * code_num
+
+    # For each line in lines
     for i in range(code_num):
-        if not line[i].isdigit():
-            h = ast.literal_eval(line[i])
+        if not lines[i].isdigit():
+            # Convert String to JSON
+            h = ast.literal_eval(lines[i])
+
+            # If the line is a valid dictionnary
             if type(h) is dict:
                 code_combinaison[code_index]= h
             else:
-                print(line[i])
                 return False
-        else:
-            code_combinaison[code_index] = int(line[i])
+        else: # Line is a number
+            code_combinaison[code_index] = int(lines[i])
+
         code_index += 1
+
+    # Reset the counter
     code_index = 0
-    message = line[len(line) - 1]
+
+    message = lines[len(lines) - 1]
     return True
 
 def translate(number):
+    """
+    Translate the number into a direction
+
+    1 : up
+    2 : down
+    3 : left
+    4 : right
+
+    Parameters
+    ----------
+    number:int
+        The direction number
+
+    Returns
+    -------
+    -: String
+        The corresponding direction or "up" if (number > 4) or (number < 1)
+    """
     if number == 1:
         return "up"
     elif number == 2:
@@ -77,42 +149,93 @@ def translate(number):
         return "up"
 
 def reset_display():
+    """
+    Reset the display if a combinaison is wrong and returns the 0, the next counter index
+
+    Parameters
+    ----------
+    /
+
+    Returns
+    -------
+    -: int
+        Returns 0
+    """
     for i in range(code_num):
         display[i] = R
     sense.set_pixels(display)
     return 0
 
 def advance(i):
+    """
+    Called when a combinaison is correct, fill a red pixel with green, increment the counter
+
+    Parameters
+    ----------
+    i: int
+        The current counter index
+
+    Returns
+    -------
+    p: int
+        i + 1
+    """
     display[i] = G
     sense.set_pixels(display)
     p = i + 1
     print("Bravo! (%s/%s)"%(str(p), str(len(code_combinaison))))
     return p
 
-def decrypt(fichier):
+def decrypt(secret_file):
+    """
+    Main function for decryption
+
+    Will wait for event to occure and compare them with the expected event stored in code_combinaison
+    The user will unlock the locks step by step unless he makes a mistake and has to start over
+
+    Parameters
+    ----------
+    secret_file: File
+        The secret_file containing the combinaison and the message
+
+    Returns
+    -------
+    /
+    """
     global code_index, code_combinaison, code_num,  message, locked, unlocked
 
     sense.set_pixels(locked)
+    # Wait for an event in order to begin
     event = sense.stick.wait_for_event()
     while event.action != ACTION_RELEASED:
         event = sense.stick.wait_for_event()
 
-
+    # Display the number of locks, the red are the locked ones and the green the unlocked
     for i in range(code_num):
         display[i] = R
     sense.set_pixels(display)
     sense.set_imu_config(False, False, True) # active seulement l'accelerometre
+
     locked = True
+
     print("Pivoter puis valider la position")
     while locked:
         event = sense.stick.wait_for_event()
+
+        # If a joystick action occured
         if event.action == ACTION_PRESSED:
             if event.direction != "middle":
+                # If we got a direction and we are not expecting a dictionnary
                 if (not type(code_combinaison[code_index]) is dict) and (translate(code_combinaison[code_index]) == event.direction):
                     code_index = advance(code_index)
+
+                # If we were expecting a dictionnary or the direction is wrong
                 else:
                     code_index = reset_display()
+
+            # Middle pressed
             else:
+                # We are expecting an integer and got a dictionnary, reset the locks
                 if not type(code_combinaison[code_index]) is dict:
                     code_index = reset_display()
                     continue
@@ -121,23 +244,42 @@ def decrypt(fichier):
                 x = acc['x']
                 y = acc['y']
                 z = acc['z']
-                if (close(x,code_combinaison[code_index]['x'])
-                        and close(y,code_combinaison[code_index]['y'])
-                        and close(z,code_combinaison[code_index]['z'])): # toutes les directions doivent etre bonnes
+
+                # If the value is close enough
+                if (close_enough(x,code_combinaison[code_index]['x'])
+                        and close_enough(y,code_combinaison[code_index]['y'])
+                        and close_enough(z,code_combinaison[code_index]['z'])):
                     code_index = advance(code_index)
                 else:
                     code_index = reset_display()
+
+        # If their are no more locked locks
         if code_index >= len(code_combinaison):
             locked = False
+
     sense.set_pixels(unlocked)
     sleep(2)
     sense.show_message(message)
 
 def pushed_middle(event):
+    """
+    In encrypting mode, will record the position of the raspberry and save it, will increment the index
+    """
     global code_index, code_combinaison
     if event.action == ACTION_PRESSED:
         code_combinaison[code_index] = sense.get_accelerometer_raw()
         code_index += 1
+
+"""
+The following 4 functions are used in encryption mode
+
+When a joystick action other than the middle one occure, save it and increment the index
+
+1 : up
+2 : down
+3 : left
+4 : right
+"""
 
 def pushed_up(event):
     global code_index, code_combinaison
@@ -163,26 +305,52 @@ def pushed_right(event):
         code_combinaison[code_index] = 4
         code_index +=1
 
-def encrypt(fichier):
+def encrypt(secret_file):
+    """
+    Records actions performed and a message and save it in the secret_file
+
+    Parameters
+    ----------
+    secret_file: File
+        The secret file containing the locks and the message
+
+    Returns
+    -------
+    /
+    """
     global code_combinaison
 
-    message = input("Entrez votre message secret : \n")
+    # Wait for the message to be entered
+    # ANY action performed before will be the locks
+    message = input('''
+            You are now recording the combinations that
+            will be needed to unlock the secret message!
+
+            Press middle to record the RPI position or
+            any direction to record the joystick direction
+
+            When you are done, type your secret message and
+            press ENTER :
+
+            ''')
     for i in range(len(code_combinaison)):
         if not code_combinaison[i] is None:
-            fichier.write(str(code_combinaison[i])+ '\n')
-    fichier.write(str(message))
+            secret_file.write(str(code_combinaison[i])+ '\n')
+    secret_file.write(str(message))
 
 if os.path.isfile("secretKey.txt"):
-    fichier = open("secretKey.txt", "r")
-    if isValid(fichier):
-        decrypt(fichier)
+    secret_file = open("secretKey.txt", "r")
+    if isValid(secret_file):
+        decrypt(secret_file)
 else:
-    fichier = open("secretKey.txt", "w")
+    secret_file = open("secretKey.txt", "w")
 
+    # Bind the joystick actions
     sense.stick.direction_middle = pushed_middle
     sense.stick.direction_up = pushed_up
     sense.stick.direction_down = pushed_down
     sense.stick.direction_right = pushed_right
     sense.stick.direction_left = pushed_left
-    encrypt(fichier)
-    fichier.close()
+
+    encrypt(secret_file)
+    secret_file.close()
