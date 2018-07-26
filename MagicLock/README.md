@@ -24,19 +24,19 @@ Si aucun message n'existe, l'utilisateur peut créer sa propre combinaison et en
 
 ### Délivrables
 
-### Extensions
+Nous avons départagé le projet en deux parties : le cryptage et le decryptage. Cela nous a pris plus  ou moins 2h30 pour le cryptage et 3h pour le décryptage plus 1h30 pour merge les deux parties et rendre le programme 100% utilisable.
 
 ### Emulation
 
+Le logiciel d'**émulation de Trinket.io** ne permettant pas d'utiliser les utilitaires de fichiers, il n'est possible de tester le code seulement avec des données *hard-codée*.
 
-## Podomètre
-
-### Faisabilité
-
-### Difficultés
-
-### Délivrables
+Pour le logiciel **stand-alone sense_emu**, cela fonctionne bien. Il est possible de crypter une combinaison ainsi que de décrypter la combinaison et faire afficher le message secret.
 
 ### Extensions
 
-### Emulation
+Voici quelques extensions faisables. Les étoiles représentent la difficulté sur une échelle de &ast; (facile) à &ast;&ast;&ast; (difficle).
+
+* Limiter le nombre d'essai pour déverrouiller dans la partie décryptage (&ast;)
+* Selection du message à enregistrer avec joystick et écran LED pour la partie cryptage (&ast;&ast;&ast;)
+* Stocker la combinaison et le message autre part que dans un fichier txt (&ast;&ast;)
+* Permettre de reset le message secret (&ast;&ast;)
