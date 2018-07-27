@@ -9,27 +9,60 @@ import subprocess
 
 sense = SenseHat()
 
-index_x = 0
+index_x = 0 # The current x-pos of the top_left pixel
+index_y = 0 # The current y-pos of the top_left pixel
 default_index_x = 0
-index_y = 0
-default_index_y_temp = 0
-default_index_y_humid = 0
-height_temp = 0
-height_humid = 0
-width = 0
+default_index_y_temp = 0  # The default y-pos of the top_left pixel for the temperature tab; used to reset display
+default_index_y_humid = 0 # The default y-pos of the top_left pixel for the humidity tab; used to reset display
+height_temp = 8 # The maximum height the Temperature curve can have with a minimum of 8. [8, +infinity[
+height_humid = 8 # The maximum height the Humidity curve can have with a minimum of 8. [8, +infinity[
+width = 0 # Equals the number of samples collected
 
 displayed_data = "humid"
 
-def collect(time):
-    tab_temp = [None] * time
-    tab_humid = [None] * time
-    for i in range(time):
+def collect(number, time=0.5):
+    """
+    Collect data (temp, humid) over time and store it in array
+
+    Parameters
+    ----------
+    number: int
+        The number of samples to collect
+    [time]: float
+        The rate at which sample is collected in seconds
+
+    Returns
+    -------
+    tab_temp: float[]
+        Raw temperature collected
+    tab_humid: float[]
+        Raw humidity collected in percentages
+    """
+    tab_temp = [None] * number
+    tab_humid = [None] * number
+    for i in range(number):
         tab_temp[i] = sense.temperature
-        tab_humid[i] = sense.humidity / 100
-        sleep(0.5) # Rate of collecting
+        tab_humid[i] = sense.humidity / 100 # We want percentages
+        sleep(time) # Rate of collecting
     return (tab_temp, tab_humid)
 
 def humidex(temp, humid):
+    """
+    Converts the temperature into Humidex index according to its formula :
+    https://en.wikipedia.org/wiki/Humidex
+
+    Parameters
+    ----------
+    temp: float
+        Temperature in Celcius degree
+    humid: float
+        Humidity in percentage
+
+    Returns
+    -------
+    -: float
+        The humidex index corresponding to temp and humid
+    """
     a, b = 17.27, 237.7
     def alpha(temp, rh):
         return (a * temp) / (b + temp) + log(rh)
@@ -42,21 +75,37 @@ def humidex(temp, humid):
     h = 0.5555 * (e - 10)
     return temp + h
 
-def correct_temp(temp):
+def correct_temp(temp_tab):
+    """
+    Correct the temperature biased by the CPU temp
+
+    Parameters
+    ----------
+    temp: float
+        The collected temperature
+
+    Returns
+    -------
+    temp_calibrated: float
+        A more realistic temperature in Celcius degree
+    """
     output = subprocess.check_output("cat /sys/class/thermal/thermal_zone0/temp", shell=True)
     cpu_temp = int(output)/1000
-    temp_calibrated = temp - ((cpu_temp - temp)/1.5)
+    temp_calibrated = [None] * len(temp_tab)
+    for i in range(len(temp_tab)):
+        temp_calibrated = temp_tab[i] - ((cpu_temp - temp_tab[i]/1.5))
     return temp_calibrated
 
-def treat_data(tab_temp, tab_humid):
-    length = len(tab_temp)
-    new_temp = [None] * length
-    new_humid = [None] * length
-    for i in range(length):
-        new_temp[i] = correct_temp(tab_temp[i])
+def treat_data(temp_tab, humid_tab):
+    """
 
-        new_humid[i] = humidex(new_temp[i], tab_humid[i])
-    return new_temp, new_humid
+    """
+    length = len(tab_temp)
+    new_humidex = [None] * length
+    new_temp_tab = correct_temp(temp_tab)
+    for i in range(length):
+        new_humidex[i] = humidex(new_temp_tab[i], humid_tab[i])
+    return new_humidex
 
 def display(tab):
     """
@@ -200,8 +249,8 @@ def create_curve(data_tab):
 temp = []
 humid = []
 if len(sys.argv) > 1:
-    temp_raw, humid_raw = collect(int(sys.argv[1]))
-    temp, humid = treat_data(temp_raw, humid_raw)
+    temp_raw, humid = collect(int(sys.argv[1]))
+    temp = treat_data(temp_raw, humid)
 else:
     temp = [26, 25, 24, 23, 22, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34]
     humid = [33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 22, 23, 24, 25, 26]
