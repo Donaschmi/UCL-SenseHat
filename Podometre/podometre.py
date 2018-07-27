@@ -1,4 +1,4 @@
-from sense_hat import SenseHat,ACTION_RELEASED
+from sense_emu import SenseHat,ACTION_RELEASED
 from time import sleep,time
 from math import pow,sqrt
 
@@ -17,16 +17,18 @@ R = [255, 0, 0]
 G = [127, 255, 0]
 mean = 0.0
 step_count = 0
+data = []
+prev = 0
 
 # display red screen to show inactivity
 display = [R] * 64
 sense.set_pixels(display)
 
 # Wait for an event in order to begin
-print("Appuyer sur le joystick pour commencer")
-event = sense.stick.wait_for_event()
-while event.action != ACTION_RELEASED:
-	event = sense.stick.wait_for_event()
+#print("Appuyer sur le joystick pour commencer")
+#event = sense.stick.wait_for_event()
+#while event.action != ACTION_RELEASED:
+#	event = sense.stick.wait_for_event()
 
 
 # display red screen to show start of logging
@@ -46,20 +48,19 @@ while True:
 	x = acc['x']
 	y = acc['y']
 	z = acc['z']
-	print("x:%s, y:%s, z:%s"%(x,y,z))
-	mag = sqrt(pow(x,2)+pow(y,2)+pow(z,2))
-	print(mag)
+	data.append((x,y,z)) # append new data point
 	
-	# TODO: substract mean from mag to remove constant effects like gravity...
-	# for mean we need to have stored previous data...
+	mag = sqrt(pow(x,2)+pow(y,2)+pow(z,2)) # Calculate magnitude
 	
-	# Determine the threshold value to increase step_count
-	if (mag > 1.0):
+	# TODO: check if it is a peak or not => of yes and > Thres then +step!
+	
+	# TODO: remove this
+	if (mag > 1.3):
 		step_count += 1
-	sleep(0.2)
+	sleep(0.018) # gogo
 	
-	# stop after 5 seconds
-	if (t-start_time > 5000):
+	# stop after 10 seconds
+	if (t-start_time > 10000):
 		break
 
 
