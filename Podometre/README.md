@@ -2,6 +2,13 @@
 
 data.hat and data.csv are a test file with 10 seconds of sensehat data capture. different format but same raw data
 
+## Steps for step detection (2 ways)
+The most accurate way is the second.
+
+1. Read accelerometer data, calculate de magnitude: sqrt(x^2+y^2+z^2), then check if the magnitude is greater than a certain value. If yes then you count it as a step
+
+2. Read accelerometer data, calculate de magnitude: sqrt(x^2+y^2+z^2), then analyse if it is a peak or not (by comparing to the prevouis data point) if it is a peak, check if it is above a certain level before counting it as a step
+
 ## Podometre
 
 Le podomètre enregistre le nombre de pas effectué par un randonneur. Il enregistre aussi des paramètres comme la température et l'humidité. L'indice humidex qui est la température perçu, est aussi calcué avec une formule bien spécifique.
