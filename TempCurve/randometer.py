@@ -93,14 +93,14 @@ def correct_temp(temp_tab):
     cpu_temp = int(output)/1000
     temp_calibrated = [None] * len(temp_tab)
     for i in range(len(temp_tab)):
-        temp_calibrated = temp_tab[i] - ((cpu_temp - temp_tab[i]/1.5))
+        temp_calibrated[i] = temp_tab[i] - ((cpu_temp - temp_tab[i]/1.5))
     return temp_calibrated
 
 def treat_data(temp_tab, humid_tab):
     """
 
     """
-    length = len(tab_temp)
+    length = len(temp_tab)
     new_humidex = [None] * length
     new_temp_tab = correct_temp(temp_tab)
     for i in range(length):
