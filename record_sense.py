@@ -1,11 +1,13 @@
 from sense_hat import SenseHat, ACTION_PRESSED, ACTION_RELEASED, ACTION_HELD
-import os
+import os,sys
 from time import gmtime, strftime
 
 sense = SenseHat()
 
-
-DURATION = 10 # in seconds!
+if len(sys.argv) != 2:
+	DURATION = 10 # in seconds!
+else: 
+	DURATION = int(sys.argv[1])	# argv[0] is filename
 
 # Color code
 R = [255, 0, 0]
