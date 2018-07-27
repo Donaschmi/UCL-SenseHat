@@ -4,6 +4,7 @@
 from sense_hat import SenseHat, ACTION_RELEASED
 from time import sleep
 from math import log, exp
+import sys
 import subprocess
 
 sense = SenseHat()
@@ -90,8 +91,8 @@ def current_display(tab):
     """
     ret_tab = [[0 for x in range(8)] for y in range(8)]
 
-    for i in range(8):
-        for j in range(8):
+    for i in range(min(8, width)):
+        for j in range(min(8, height)):
             ret_tab[i][j] = tab[i + index_x][j + index_y]
     return ret_tab
 
@@ -109,48 +110,78 @@ def pressed_right(event):
         index_x = 0 if min(index_x + 1, width - 8) < 0 else min(index_x + 1, width - 8)
         print(index_x)
 
+def pressed_up(event):
+    global index_y
+    if event.action != ACTION_RELEASED:
+        index_y = max(0, index_y -1)
+        print(index_y)
+
+def pressed_down(event):
+    global index_y
+    if event.action != ACTION_RELEASED:
+        index_y = 0 if min(index_y + 1, height - 8) < 0 else min(index_y + 1, height - 8)
+        print(index_y)
+
 sense.stick.direction_left = pressed_left
 sense.stick.direction_right = pressed_right
+sense.stick.direction_up = pressed_up
+sense.stick.direction_down = pressed_down
 
 def create_temp_curve(temp_tab):
-    global height, width
-    def max_diff(arr, arr_size):
-        max_diff = arr[1] - arr[0]
-        for i in range( 0, arr_size  ):
-            for j in range( i+1, arr_size  ):
-                if(arr[j] - arr[i] > max_diff):
-                    max_diff = arr[j] - arr[i]
-        return max_diff
+    global height, width, index_y
+
+    def min_max(arr, arr_size):
+        max_t = arr[0]
+        min_t = arr[0]
+        for i in range(arr_size):
+            if arr[i] > max_t:
+                max_t = arr[i]
+            if arr[i] < min_t:
+                min_t = arr[i]
+        return min_t, max_t
 
     sense.clear()
     # The max difference between two temp; if greater than 8, then we need to move vertically
-    min_max_diff = max_diff(temp_tab, len(temp_tab))
-    height = max(8, round(min_max_diff))
+    min_t, max_t = min_max(temp_tab, len(temp_tab))
+    min_max_diff = max_t - min_t
+    print(temp_tab)
+    height = max(8, round(min_max_diff+1))
 
     width = len(temp_tab)
-    print(width, height)
     # Create the full tab with every values
     #   height = max difference between two temp
     #   width = number of sample collected
     #
     #   Returns a height * width new tab
     temp_array = [[0 for x in range(height)] for y in range(width)]
+    print(temp_array)
 
     base_temp = temp_tab[0]
-    base_index = 3
 
+    # Change the base_index depending on max variation of temp
+    # eg : If at t=10 the temp is at its maximum,
+    base_index = round(max_t) - round(base_temp)
+    print(base_index)
+
+    index_y = base_index - 4
+    print("index_y = ", index_y)
     for i in range(width):
         diff = round(temp_tab[i]) - round(base_temp)
-        temp_array[i][base_index-diff] = 1
+        print(base_index - diff)
+        temp_array[i][base_index - diff] = 1
     print(temp_array)
     return temp_array
 
+tab = []
+if len(sys.argv) > 1:
+    temp_raw, humid_raw = collect(int(sys.argv[1]))
+    tab, humid = treat_data(temp_raw, humid_raw)
+else:
+    tab = [26, 25, 24, 23, 22, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33]
+full_tab = create_temp_curve(tab)
 
-temp_raw, humid_raw = collect(10) # Will collect 10 samples
-temp, humidex = treat_data(temp_raw, humid_raw)
-print(temp)
-full_tab = create_temp_curve(temp)
+# Debugging purpose
+
 while True:
     # Continuously display the current tab while listening to joystick events
     display(current_display(full_tab))
-
