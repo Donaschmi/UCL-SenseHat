@@ -286,10 +286,10 @@ def create_curve(data_tab):
 
 temp = []
 humid = []
-if len(sys.argv) == 1:
+if len(sys.argv) == 2:
     temp_raw, humid = collect(int(sys.argv[1]))
     temp = treat_data(temp_raw, humid)
-elif len(sys.argv) == 2:
+elif len(sys.argv) == 3:
     temp_raw, humid = collect(int(sys.argv[1]), float(sys.argv[2]))
     temp = treat_data(temp_raw, humid)
 else:
@@ -300,7 +300,7 @@ else:
 # Create both curves
 full_humid_tab = create_curve(humid)
 displayed_data = "temp"
-full_temp_tab = create_curve(temp
+full_temp_tab = create_curve(temp)
 
 while True:
     # Continuously display the current tab while listening to joystick events
