@@ -2,6 +2,11 @@
 
 data.hat and data.csv are a test file with 10 seconds of sensehat data capture. different format but same raw data
 
+## Test with sense_play
+to test the podometer, please use the following command:
+
+__sense_play data.hat & python3 podoscript.py__
+ This will send data to the sense_emu and your script will directly read those values. don't forget to use sense_emu instead of sense_hat for testing with emulator
 ## Steps for step detection (2 ways)
 The most accurate way is the second.
 
