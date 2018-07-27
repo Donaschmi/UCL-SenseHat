@@ -48,13 +48,12 @@ while True:
 	
 	mag = sqrt(pow(x,2)+pow(y,2)+pow(z,2)) # Calculate magnitude
 	
-	if direction(prev,mag) != cur_direction: # see if peak or not
-		# peak
-		if mag > threshold: # check if above some threshold
+	if direction(prev,mag) != prev_direction: # see if peak or not
+		# peak because we descend now is previous value is peak!
+		if (prev_direction == 1 and prev > threshold): # check if above some threshold
 			step_count += 1
 		# udpate vars
 		prev_direction = cur_direction
-		cur_direction *= -1
 		
 	# stop after 10 seconds
 	if (t-start_time > 10000):
