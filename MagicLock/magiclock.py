@@ -20,6 +20,7 @@ message = ""
 # Color code
 R = [255, 0, 0]
 G = [127, 255, 0]
+B = [0, 0, 255]
 O = [255, 255, 255]
 
 # Some image to display
@@ -40,6 +41,16 @@ unlocked=[O,O,G,G,G,G,O,O,
         O,G,G,G,G,G,G,O,
         O,G,G,G,G,G,G,O,
         O,G,G,G,G,G,G,O]
+
+question_mark=[O,O,O,B,B,B,O,O,
+        O,O,B,B,B,B,B,O,
+        O,B,B,O,O,B,B,O,
+        O,O,O,O,O,B,B,O,
+        O,O,O,O,B,B,O,O,
+        O,O,O,B,B,O,O,O,
+        O,O,O,O,O,O,O,O,
+        O,O,O,B,B,O,O,O]
+
 
 # The default display screen
 display = [O] * 64
@@ -212,6 +223,12 @@ def decrypt(secret_file):
     while event.action != ACTION_RELEASED:
         event = sense.stick.wait_for_event()
 
+    if code_num == 0:
+        sense.set_pixels(unlocked)
+        sleep(2)
+        sense.show_message(message)
+        return
+
     # Display the number of locks, the red are the locked ones and the green the unlocked
     for i in range(code_num):
         display[i] = R
@@ -219,7 +236,6 @@ def decrypt(secret_file):
     sense.set_imu_config(False, False, True) # active seulement l'accelerometre
 
     locked = True
-
     print("Pivoter puis valider la position ou diriger le joystick dans une direction")
     while locked:
         event = sense.stick.wait_for_event()
@@ -344,6 +360,7 @@ if os.path.isfile("secretKey.txt"):
     secret_file = open("secretKey.txt", "r")
     if isValid(secret_file):
         decrypt(secret_file)
+
 else:
     secret_file = open("secretKey.txt", "w")
 
@@ -353,6 +370,7 @@ else:
     sense.stick.direction_down = pushed_down
     sense.stick.direction_right = pushed_right
     sense.stick.direction_left = pushed_left
-
+    sense.set_pixels(question_mark)
     encrypt(secret_file)
     secret_file.close()
+    sense.clear()
