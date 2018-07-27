@@ -25,9 +25,10 @@ R = [255, 0, 0]
 G = [127, 255, 0]
 step_count = 0
 data = []
-prev = 0
+prev_mag = 0.0
 cur_direction = 1
 prev_direction = 1
+threshold = 1.25
 
 
 # display red screen to show start of logging
@@ -48,13 +49,16 @@ while True:
 	
 	mag = sqrt(pow(x,2)+pow(y,2)+pow(z,2)) # Calculate magnitude
 	
-	if direction(prev,mag) != prev_direction: # see if peak or not
+	if direction(prev_mag,mag) != prev_direction: # see if peak or not
 		# peak because we descend now is previous value is peak!
-		if (prev_direction == 1 and prev > threshold): # check if above some threshold
+
+		if (prev_direction == 1 and prev_mag > threshold): # check if above some threshold
 			step_count += 1
-		# udpate vars
-		prev_direction = cur_direction
-		
+	
+	# update variables	
+	prev_mag = mag
+	prev_direction = cur_direction
+	
 	# stop after 10 seconds
 	if (t-start_time > 10000):
 		break
