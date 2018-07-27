@@ -81,13 +81,13 @@ def correct_temp(temp_tab):
 
     Parameters
     ----------
-    temp: float
-        The collected temperature
+    temp: float[]
+        The collected temperature tab
 
     Returns
     -------
-    temp_calibrated: float
-        A more realistic temperature in Celcius degree
+    temp_calibrated: float[]
+        A more realistic temperature tab in Celcius degree
     """
     output = subprocess.check_output("cat /sys/class/thermal/thermal_zone0/temp", shell=True)
     cpu_temp = int(output)/1000
@@ -98,7 +98,19 @@ def correct_temp(temp_tab):
 
 def treat_data(temp_tab, humid_tab):
     """
+    Transform each temperature into humidex
 
+    Parameters
+    ----------
+    temp_tab: float[]
+        Temperature samples
+    humid_tab: float[]
+        Humidity samples
+
+    Returns
+    -------
+    new_humidex: float[]
+        New Humidex values
     """
     length = len(temp_tab)
     new_humidex = [None] * length
@@ -145,6 +157,8 @@ def current_display(tab):
         A 8 * 8 tab containing the pixels to display
     """
     ret_tab = [[0 for x in range(8)] for y in range(8)]
+
+    # Height depends on which data_set we have
     height = height_temp if displayed_data == "temp" else height_humid
     for i in range(min(8, width)):
         for j in range(min(8, height)):
@@ -184,11 +198,14 @@ def pressed_middle(event):
     if event.action != ACTION_RELEASED:
         if displayed_data == "temp":
             displayed_data = "humid"
+            # Reset the index_y to the default index of the humid data_set
             index_y = default_index_y_humid
         else:
             displayed_data = "temp"
+            # Reset the index_y to the default index of the temp data_set
             index_y = default_index_y_temp
 
+# Mount the stick
 sense.stick.direction_left = pressed_left
 sense.stick.direction_right = pressed_right
 sense.stick.direction_up = pressed_up
@@ -196,9 +213,27 @@ sense.stick.direction_down = pressed_down
 sense.stick.direction_middle = pressed_middle
 
 def create_curve(data_tab):
+    """
+    Create a list of arrays where each array is a column containing exactly one "1"
+    which is the the value at the index in data_tab
+
+    Parameters
+    ----------
+    data_tab: float[]
+        The data that will be drawn on the monitor
+
+    Returns
+    -------
+    full_data_tab: int[][]
+        Each list is a column of the full data array; [0,1]
+
+    """
     global height_temp, height_humid, width, index_y, default_index_y_temp, default_index_y_humid
 
     def min_max(arr, arr_size):
+        """
+        Helper to get the min and max of the tab
+        """
         max_t = arr[0]
         min_t = arr[0]
         for i in range(arr_size):
@@ -216,6 +251,13 @@ def create_curve(data_tab):
     full_data_tab = []
 
     width = len(data_tab)
+
+    # We change our global variable accordingly to the displayed_data
+    # Create the full tab with every values
+    #   height = max difference between two temp
+    #   width = number of sample collected
+    #
+    #   Returns a height * width new tab
     if displayed_data == "temp":
         height_temp = max(8, round(min_max_diff + 1))
         full_data_tab = [[0 for x in range(height_temp)] for y in range(width)]
@@ -223,19 +265,15 @@ def create_curve(data_tab):
         height_humid = max(8, round(min_max_diff + 1))
         full_data_tab = [[0 for x in range(height_humid)] for y in range(width)]
 
-    # Create the full tab with every values
-    #   height = max difference between two temp
-    #   width = number of sample collected
-    #
-    #   Returns a height * width new tab
-
+    # The first data that we collected is gonna be centered on the y-axis
     base_data = data_tab[0]
 
     # Change the base_index depending on max variation of temp
-    # eg : If at t=10 the temp is at its maximum,
     base_index = round(max_data) - round(base_data)
-
+    # Centers the base_index
     index_y = max(base_index - 4, 0)
+
+    # Records value for when we change displayed_data
     if displayed_data == "temp":
         default_index_y_temp = index_y
     else:
@@ -248,18 +286,22 @@ def create_curve(data_tab):
 
 temp = []
 humid = []
-if len(sys.argv) > 1:
+if len(sys.argv) == 1:
     temp_raw, humid = collect(int(sys.argv[1]))
     temp = treat_data(temp_raw, humid)
+elif len(sys.argv) == 2:
+    temp_raw, humid = collect(int(sys.argv[1]), float(sys.argv[2]))
+    temp = treat_data(temp_raw, humid)
 else:
+    # Dummy sample
     temp = [26, 25, 24, 23, 22, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34]
     humid = [33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 22, 23, 24, 25, 26]
+
+# Create both curves
 full_humid_tab = create_curve(humid)
 displayed_data = "temp"
-full_temp_tab = create_curve(temp)
-print('test', default_index_y_temp, default_index_y_humid)
-# Debugging purpose
-print(full_humid_tab)
+full_temp_tab = create_curve(temp
+
 while True:
     # Continuously display the current tab while listening to joystick events
     current_tab = full_temp_tab if displayed_data == "temp" else full_humid_tab
