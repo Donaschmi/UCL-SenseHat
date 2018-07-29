@@ -86,4 +86,4 @@ def display_number(number):
 		u = floor(number/10)
 		set_number(u,1,1)
 
-display_number(12)
+display_number(2)

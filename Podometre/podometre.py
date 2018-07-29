@@ -1,6 +1,7 @@
-from sense_emu import SenseHat,ACTION_RELEASED
+from sense_hat import SenseHat,ACTION_RELEASED
 from time import sleep,time
 from math import pow,sqrt
+from podo_display import display_number
 
 # Setup
 sense = SenseHat()
@@ -35,14 +36,20 @@ sense.set_pixels(display)
 display = [G] * 64
 sense.set_pixels(display)
 start_time = current_milli_time()
+display_number(0)
+infinite = True 
+
+def stop():
+	global infinite
+	infinite = False
+
+# set stop action by touching the joystick
+sense.stick.direction_any = stop
 
 # infinite loop
 # TODO: stop loop on joystick press?
-while True:
+while infinite:
 
-	## TODO: log all data? => RAM/DISK?
-	## TODO: 
-	##
 	t = current_milli_time()
 	acc = sense.get_accelerometer_raw()
 	x = acc['x']
@@ -52,16 +59,16 @@ while True:
 	
 	mag = sqrt(pow(x,2)+pow(y,2)+pow(z,2)) # Calculate magnitude
 	
-	# TODO: check if it is a peak or not => of yes and > Thres then +step!
 	
-	# TODO: remove this
 	if (mag > 1.3):
 		step_count += 1
+		display_number(step_count)
+	
 	sleep(0.018) # gogo
 	
 	# stop after 10 seconds
-	if (t-start_time > 10000):
-		break
+	#if (t-start_time > 10000):
+	#	break
 
 
 # Clean before exit
