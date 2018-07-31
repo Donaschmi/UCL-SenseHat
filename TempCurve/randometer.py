@@ -42,7 +42,7 @@ def collect(number, time=0.5):
     tab_humid = [None] * number
     for i in range(number):
         tab_temp[i] = sense.temperature
-        tab_humid[i] = sense.humidity / 100 # We want percentages
+        tab_humid[i] = sense.humidity
         sleep(time) # Rate of collecting
     return (tab_temp, tab_humid)
 
@@ -70,7 +70,7 @@ def humidex(temp, humid):
     def rosee(temp, rh):
         h = alpha(temp, rh)
         return (b * h) / (a - h)
-    trash = (1. / 273.16) - (1. / (273.15 + rosee(temp, humid)))
+    trash = (1. / 273.16) - (1. / (273.15 + rosee(temp, humid / 100)))
     e = 6.11 * exp(5417.7530 * trash)
     h = 0.5555 * (e - 10)
     return temp + h
@@ -294,8 +294,9 @@ elif len(sys.argv) == 3:
     temp = treat_data(temp_raw, humid)
 else:
     # Dummy sample
-    temp = [26, 25, 24, 23, 22, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 34]
-    humid = [33, 32, 31, 30, 29, 28, 27, 26, 25, 24, 23, 22, 21, 22, 23, 24, 25, 26]
+    temp_raw = [23, 24, 25, 27, 27, 28, 29, 28, 28, 27, 27, 26, 25, 23, 33, 21, 21, 21, 20, 20, 19, 20, 21]
+    humid = [60, 56, 51, 47, 44, 41, 38, 41, 41, 46, 49, 54, 60, 67, 68, 68, 70, 71, 73, 74, 75, 80, 79, 78]
+    temp = treat_data(temp_raw, humid)
 
 # Create both curves
 full_humid_tab = create_curve(humid)
