@@ -5,7 +5,7 @@ import subprocess
 
 sense = SenseHat()
 
-Br = [128,0,0] 
+Br = [128,0,0]
 R = [255,0,0]
 Bl = [130,50,0]
 X = [0,0,0]
@@ -29,7 +29,7 @@ Podo = [Or,Or,Or,Or,Or,Or,Or,Or,
 		X,R,R,X,X,X,R,R,
 		X,R,R,R,X,X,R,R,
 		X,X,X,X,X,X,X,X]
-		
+
 Hum = 	[X,X,X,X,X,X,X,X,
 		X,Bl,X,X,X,X,Bl,X,
 		X,Bl,X,X,X,X,Bl,X,
@@ -80,6 +80,7 @@ def select(event):
 			# launch Temp
 			print("Temp selected")
 			sense.clear()
+			subprocess.run(["python3", "../TempCurve/curvometer.py", "-t"])
 		elif cursor == 1:
 			# launch Podometer
 			print("Podo selected")
@@ -89,6 +90,7 @@ def select(event):
 			# launch Humiddity
 			print("Humidity selected")
 			sense.clear()
+			subprocess.run(["python3", "../TempCurve/curvometer.py", "-h"])
 		else:
 			pass
 	print("Done")
