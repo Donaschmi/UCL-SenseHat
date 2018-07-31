@@ -1,6 +1,15 @@
 from math import inf
 
 """
+THIS FILEIS NOT USED IN ANY SCRIPTS ANYMORE:
+Test script for peak detection
+
+"""
+
+
+
+
+"""
 Function that finds the peaks in a sequence of numbers stored in an array
  Use for step detection, you should apply a simple filter to remove low(uncorrect) peaks as done at the end of the file
 

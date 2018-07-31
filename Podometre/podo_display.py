@@ -1,8 +1,9 @@
 from sense_hat import SenseHat
 from math import floor
-## display 2 digit values as step counter
-C = [255,0,0] # color for digits
-X = None # no color
+
+
+C = [255,0,0] 	# Default RED color for digits
+X = None 		# no color
 
 zero =	[C, C, C,
 		C, X, C,
@@ -67,7 +68,7 @@ def set_number(number,x_offset,y_offset):
 	y = 0
 	nb = 0
 	for el in matrix:
-		if nb % 3 == 0:
+		if nb % 3 == 0: # replace cursor to draw pixel (size number != size panel)
 			y+=1
 			x=0
 		if el == sense.get_pixel(x+x_offset,y+y_offset): # skip pixels that are already displayed
@@ -80,10 +81,8 @@ def set_number(number,x_offset,y_offset):
 		nb+=1
 
 def display_number(number):
-	if number > 0 and number < 100:
+	if number >= 0 and number < 100: # only display numbers between 0 and 99 both included
 		d = number % 10
 		set_number(d,5,1)
 		u = floor(number/10)
 		set_number(u,1,1)
-
-display_number(2)
