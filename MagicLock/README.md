@@ -40,3 +40,4 @@ Voici quelques extensions faisables. Les étoiles représentent la difficulté s
 * Selection du message à enregistrer avec joystick et écran LED pour la partie cryptage (&ast;&ast;&ast;)
 * Stocker la combinaison et le message autre part que dans un fichier txt (&ast;&ast;)
 * Permettre de reset le message secret (&ast;&ast;)
+* Input text only with RPI

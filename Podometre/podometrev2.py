@@ -1,6 +1,7 @@
-from sense_emu import SenseHat,ACTION_RELEASED
+from sense_hat import SenseHat,ACTION_RELEASED
 from time import sleep,time
 from math import pow,sqrt
+from podo_display import display_number
 
 # Setup
 sense = SenseHat()
@@ -28,17 +29,26 @@ data = []
 prev_mag = 0.0
 cur_direction = 1
 prev_direction = 1
-threshold = 1.25
+threshold = 1.40
+infinite = True
 
 
 # display red screen to show start of logging
 display = [G] * 64
 sense.set_pixels(display)
 start_time = current_milli_time()
+display_number(0)
 
-# infinite loop
-# TODO: stop loop on joystick press?
-while True:
+
+def stop():
+	global infinite
+	infinite = 0
+
+# set stop action by touching the joystick
+sense.stick.direction_any = stop
+
+# infinite loop, stopped on any joystick move
+while infinite:
 
 	t = current_milli_time()
 	acc = sense.get_accelerometer_raw()
@@ -54,19 +64,22 @@ while True:
 
 		if (prev_direction == 1 and prev_mag > threshold): # check if above some threshold
 			step_count += 1
+			display_number(step_count)
 	
 	# update variables	
 	prev_mag = mag
 	prev_direction = cur_direction
 	
-	# stop after 10 seconds
-	if (t-start_time > 10000):
-		break
 	
 	sleep(0.018) # delay between 2 measures
+	
+	#if (t-start_time > 11000):
+	#	break
 
 
 # Clean before exit
 sense.clear()
 print(str(step_count))
+display_number(step_count)
+
 	
