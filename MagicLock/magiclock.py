@@ -3,8 +3,7 @@ from sense_hat import SenseHat, ACTION_PRESSED, ACTION_RELEASED, ACTION_HELD
 import os.path
 import json
 import ast
-from time import sleep
-
+from time import sleep, time
 # Indicate which combinaison is currently beeing tried
 code_index = 0
 
@@ -16,6 +15,8 @@ code_num = 0
 
 # Our secret message
 message = ""
+
+state = ""
 
 # Color code
 R = [255, 0, 0]
@@ -55,10 +56,31 @@ question_mark=[O,O,O,B,B,B,O,O,
 # The default display screen
 display = [O] * 64
 
+ZERO = [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]]
+ONE = [[0,1,0],[0,1,0],[0,1,0],[0,1,0],[0,1,0]]
+TWO = [[1,1,1],[0,0,1],[0,1,0],[1,0,0],[1,1,1]]
+THREE = [[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]]
+FOUR = [[1,0,0],[1,0,1],[1,1,1],[0,0,1],[0,0,1]]
+FIVE = [[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]]
+SIX = [[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]]
+SEVEN = [[1,1,1],[0,0,1],[0,1,0],[1,0,0],[1,0,0]]
+EIGHT = [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]]
+NINE = [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]]
+
+NUMS = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE]
+
+ARROW = [[1, 1, 1],[0, 1, 0]]
+
+index = 0
+
+coding = True
+
+debug = True
+
 # Setup SenseHat
 sense = SenseHat()
 sense.low_light = True
-
+sense.clear()
 def close_enough(x, value):
     """
     Checks if the current value is close enough to x
@@ -279,14 +301,6 @@ def decrypt(secret_file):
     sleep(2)
     sense.show_message(message)
 
-def pushed_middle(event):
-    """
-    In encrypting mode, will record the position of the raspberry and save it, will increment the index
-    """
-    global code_index, code_combinaison
-    if event.action == ACTION_PRESSED:
-        code_combinaison[code_index] = sense.get_accelerometer_raw()
-        code_index += 1
 
 """
 The following 4 functions are used in encryption mode
@@ -300,28 +314,78 @@ When a joystick action other than the middle one occure, save it and increment t
 """
 
 def pushed_up(event):
-    global code_index, code_combinaison
-    if event.action == ACTION_PRESSED:
-        code_combinaison[code_index] = 1
-        code_index +=1
+    if state == "typing":
+        pass
+    else:
+        global code_index, code_combinaison
+        if event.action == ACTION_RELEASED:
+            code_combinaison[code_index] = 1
+            code_index +=1
 
 def pushed_down(event):
-    global code_index, code_combinaison
-    if event.action == ACTION_PRESSED:
-        code_combinaison[code_index] = 2
-        code_index +=1
+    if state == "typing":
+        pass
+    else:
+        global code_index, code_combinaison
+        if event.action == ACTION_RELEASED:
+            code_combinaison[code_index] = 2
+            code_index +=1
 
 def pushed_left(event):
-    global code_index, code_combinaison
-    if event.action == ACTION_PRESSED:
-        code_combinaison[code_index] = 3
-        code_index +=1
+    if state == "typing":
+        global index
+        if event.action != ACTION_PRESSED:
+            index = (index + 9) % 10
+            sense.clear()
+    else:
+        global code_index, code_combinaison
+        if event.action == ACTION_RELEASED:
+            code_combinaison[code_index] = 3
+            code_index +=1
 
 def pushed_right(event):
-    global code_index, code_combinaison
-    if event.action == ACTION_PRESSED:
-        code_combinaison[code_index] = 4
-        code_index +=1
+    if state == "typing":
+        global index
+        if event.action != ACTION_PRESSED:
+            index = (index + 1) % 10
+            sense.clear()
+    else:
+        global code_index, code_combinaison
+        if event.action == ACTION_RELEASED:
+            code_combinaison[code_index] = 4
+            code_index +=1
+
+def pushed_middle(event):
+    global message, state, code_index, code_combinaison, debug
+    if state == "typing":
+        if event.action == ACTION_RELEASED:
+            message += str(index)
+            print(message)
+        elif event.action == ACTION_HELD:
+            state = "coding"
+            sleep(2)
+
+    elif state == "coding":
+        if event.action == ACTION_PRESSED:
+            debug = False
+        if event.action == ACTION_RELEASED and not debug:
+            code_combinaison[code_index] = sense.get_accelerometer_raw()
+            code_index += 1
+        elif event.action == ACTION_HELD and not debug:
+            state = "done"
+
+def display_number(number1, number2):
+    for i in range(3):
+        for j in range(5):
+            sense.set_pixel(i+1, j+3, [255, 255, 255]) if number1[j][i] == 1 else sense.set_pixel(i+1, j+3, [0, 0, 0])
+            sense.set_pixel(i+5, j+3, [255, 255, 255]) if number2[j][i] == 1 else sense.set_pixel(i+5, j+3, [0, 0, 0])
+    offset = 0
+    if index % 2 == 1:
+        offset = 4
+    for i in range(3):
+        for j in range(2):
+            sense.set_pixel(i+1+offset, j, [255, 0, 0])if ARROW[j][i] == 1 else sense.set_pixel(i+1+offset, j, [0, 0, 0])
+
 
 def encrypt(secret_file):
     """
@@ -340,17 +404,8 @@ def encrypt(secret_file):
 
     # Wait for the message to be entered
     # ANY action performed before will be the locks
-    message = input('''
-            You are now recording the combinations that
-            will be needed to unlock the secret message!
-
-            Press middle to record the RPI position or
-            any direction to record the joystick direction
-
-            When you are done, type your secret message and
-            press ENTER :
-
-            ''')
+    while state == "coding":
+        pass
     for i in range(len(code_combinaison)):
         if not code_combinaison[i] is None:
             secret_file.write(str(code_combinaison[i])+ '\n')
@@ -359,18 +414,22 @@ def encrypt(secret_file):
 if os.path.isfile("secretKey.txt"):
     secret_file = open("secretKey.txt", "r")
     if isValid(secret_file):
+        state = "decrypt"
         decrypt(secret_file)
 
 else:
     secret_file = open("secretKey.txt", "w")
-
+    state = "typing"
     # Bind the joystick actions
     sense.stick.direction_middle = pushed_middle
     sense.stick.direction_up = pushed_up
     sense.stick.direction_down = pushed_down
     sense.stick.direction_right = pushed_right
     sense.stick.direction_left = pushed_left
-    sense.set_pixels(question_mark)
+    while state == "typing":
+        display_number(NUMS[index], NUMS[index+1]) if index % 2 == 0 else display_number(NUMS[index - 1], NUMS[index])
+    sense.show_message(message)
+    print("test")
     encrypt(secret_file)
     secret_file.close()
     sense.clear()
