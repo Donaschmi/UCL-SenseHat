@@ -22,7 +22,6 @@ def direction(previous_elem, element):
 R = [255, 0, 0]
 G = [127, 255, 0]
 step_count = 0
-data = []
 prev_mag = 0.0
 cur_direction = 1
 prev_direction = 1
