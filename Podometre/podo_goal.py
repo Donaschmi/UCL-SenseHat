@@ -16,26 +16,38 @@ def direction(previous_elem, element):
 	else:
 		return 1
 
-
-
-# Variables
-R = [255, 0, 0]
-G = [127, 255, 0]
-step_count = 99 # TODO: import from select display LED
-prev_mag = 0.0
-cur_direction = 1
-prev_direction = 1
-threshold = 1.40
-infinite = True
-
-
-# display 00 at start
-display_number(0)
-
-
+"""
+Function that sets the loop condition to false
+"""
 def stop():
 	global infinite
 	infinite = 0
+
+
+# Colors
+R = [255, 0, 0]		# Red
+G = [127, 255, 0]	# Green
+X = [0,0,0]			# None
+step_count = 5 		# TODO: import from select display LED
+
+Finished = 	[X,X,X,X,X,X,X,X,
+			X,X,X,X,X,X,X,X,
+			X,X,X,X,X,X,X,G,
+			X,X,X,X,X,X,G,G,
+			X,G,X,X,X,G,X,G,
+			X,X,G,X,G,X,X,X,
+			X,X,X,G,X,X,X,X,
+			X,X,X,X,X,X,X,X]
+
+
+prev_mag = 0.0		# Previous magnitude value
+prev_direction = 1	# Previous direction value
+threshold = 1.37	# threshold value: if mag > => then step++
+infinite = True		# condition of main loop
+
+
+# display step_count at start
+display_number(step_count)
 
 # set stop action by touching the joystick
 sense.stick.direction_any = stop
@@ -50,10 +62,10 @@ while infinite:
 	
 	mag = sqrt(pow(x,2)+pow(y,2)+pow(z,2)) # Calculate magnitude
 	
-	if direction(prev_mag,mag) != prev_direction: # see if peak or not
-		# peak because we descend now is previous value is peak!
+	cur_direction = direction(prev_mag,mag)
+	if cur_direction != prev_direction: # see if peak
 
-		if (prev_direction == 1 and prev_mag > threshold): # check if above some threshold
+		if (prev_direction == 1 and prev_mag > threshold): # check if above some threshold and previous direction was up
 			step_count -= 1
 			display_number(step_count)
 	
@@ -67,6 +79,5 @@ while infinite:
 
 # Clean before exit
 sense.clear()
-print("Completed")
-
-	
+sense.set_pixels(Finished)
+print("Completed")	
