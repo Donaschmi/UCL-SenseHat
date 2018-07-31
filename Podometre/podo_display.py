@@ -1,10 +1,11 @@
 from sense_hat import SenseHat
 from math import floor
 
-
+# Colors
 C = [255,0,0] 	# Default RED color for digits
 X = None 		# no color
 
+# 5x3 pixel numbers
 zero =	[C, C, C,
 		C, X, C,
 		C, X, C,
@@ -56,18 +57,23 @@ nine = 	[C, C, C,
 		X, X, C,
 		C, C, C]
 
-link = {'0':zero, '1':one,'2':two,'3':three,'4':four,'5':five,'6':six,'7':seven,'8':eight,'9':nine}
+# Link between image and number
+link = {0:zero, 1:one,2:two,3:three,4:four,5:five,6:six,7:seven,8:eight,9:nine}
 
 sense = SenseHat()
 
 sense.clear()
 
-def set_number(number,x_offset,y_offset):
-	matrix = link[str(number)] # gives the matrix representing the number
+"""
+Function that diplays a digit with a certain offset on the LED panel of the senseHat
+"""
+def set_digit(number,x_offset,y_offset):
+	global sense
+	matrix = link[number] # gives the matrix representing the number
 	x = 0
 	y = 0
 	nb = 0
-	for el in matrix:
+	for el in matrix: # For each pixel in the matrix
 		if nb % 3 == 0: # replace cursor to draw pixel (size number != size panel)
 			y+=1
 			x=0
@@ -80,9 +86,15 @@ def set_number(number,x_offset,y_offset):
 		x+=1
 		nb+=1
 
-def display_number(number):
+"""
+Function that displays a number in an optional color on the LED panel of the senseHat
+"""
+def display_number(number,color=[255,0,0]):
+	global C
+	if (color != None): 
+		C = color
 	if number >= 0 and number < 100: # only display numbers between 0 and 99 both included
 		d = number % 10
-		set_number(d,5,1)
+		set_digit(d,5,1)
 		u = floor(number/10)
-		set_number(u,1,1)
+		set_digit(u,1,1)
