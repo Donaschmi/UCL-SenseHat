@@ -3,17 +3,16 @@
 
 ## Podometre
 
-Le podomètre enregistre le nombre de pas effectué par un randonneur. Il utilise l'accéléromètre pour détecté des mouvements et compter les nombres de pas. Dès le début du script, les pas sont compté et affiché sur l'écran (limite d'affichage est de 0 à 99). Pour arreter le script, il suffit de bouger le joystick.
+Le podomètre enregistre le nombre de pas effectués par un randonneur en utilisant l'accéléromètre du sense hat. Le nombre de pas est affichés sur l'écran (limite d'affichage est de 0 à 99). P
+Après le lancement du script, il faut bouger le joystick pour débuter le comptage en temps réel. Pour l'arreter il suffit de bouger le joystick.
 
 ### Etapes à suivre
 
-Il y a 2 manières de procéder pour le comptage du nombres de pas:
+1. Lire les données de l'accéléromètre
 
-1. Lire les données de l'accéléromètre, calculer la magnitude des 3 données ( sqrt(x^2+y^2+z^2)), ensuite compter un pas si cette valeurs est au dessus d'un certain seuil
+2. Calculer la magnitude des 3 données ( sqrt(x^2+y^2+z^2))
 
-2. Lire les données de l'accéléromètre, calculer la magnitude des 3 données ( sqrt(x^2+y^2+z^2)), ensuite analyser si la donnée est un pic de mouvement (la donné précédente est plus grande). Si c'est le cas alors compter un pas.
-
-La seconde manière de faire est plus précise que la première
+3. Analyser si la donnée est un pic de mouvement (la donné précédente est plus grande...). Si c'est le cas alors compter un pas.
 
 ### Faisabilité
 
@@ -22,7 +21,7 @@ La seconde manière de faire est plus précise que la première
 
 ### Difficultés
 
-* Trouver les bons paramètres de calibrage pour le comptage de pas
+* Trouver les bons paramètres de calibrage pour le comptage du nombres de pas
 * Afficher un nombre à 2 chiffres sur l'écran LED
 * Détecter un pic de gravité dans les mesures (simple: en comparaison la valeur actuelle et la précédente)
 
