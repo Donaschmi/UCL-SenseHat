@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from sense_hat import SenseHat, ACTION_RELEASED
+from sense_hat import SenseHat, ACTION_RELEASED, ACTION_PRESSED, ACTION_HELD
 from time import sleep
 from math import log, exp
 import sys
@@ -10,17 +10,13 @@ import subprocess
 sense = SenseHat()
 
 index_x = 0 # The current x-pos of the top_left pixel
-index_y = 0 # The current y-pos of the top_left pixel
 default_index_x = 0
-default_index_y_temp = 0  # The default y-pos of the top_left pixel for the temperature tab; used to reset display
-default_index_y_humid = 0 # The default y-pos of the top_left pixel for the humidity tab; used to reset display
-height_temp = 8 # The maximum height the Temperature curve can have with a minimum of 8. [8, +infinity[
-height_humid = 8 # The maximum height the Humidity curve can have with a minimum of 8. [8, +infinity[
 width = 0 # Equals the number of samples collected
-
+prev_index = -1
 displayed_data = "humid"
-
-def collect(number, time=0.5):
+state = "collecting"
+debug = True
+def collect(time=0.5):
     """
     Collect data (temp, humid) over time and store it in array
 
@@ -38,11 +34,11 @@ def collect(number, time=0.5):
     tab_humid: float[]
         Raw humidity collected in percentages
     """
-    tab_temp = [None] * number
-    tab_humid = [None] * number
-    for i in range(number):
-        tab_temp[i] = sense.temperature
-        tab_humid[i] = sense.humidity
+    tab_temp = []
+    tab_humid = []
+    while state == "collecting":
+        tab_temp.append(sense.temperature)
+        tab_humid.append(sense.humidity)
         sleep(time) # Rate of collecting
     return (tab_temp, tab_humid)
 
@@ -158,11 +154,9 @@ def current_display(tab):
     """
     ret_tab = [[0 for x in range(8)] for y in range(8)]
 
-    # Height depends on which data_set we have
-    height = height_temp if displayed_data == "temp" else height_humid
     for i in range(min(8, width)):
-        for j in range(min(8, height)):
-            ret_tab[i][j] = tab[i + index_x][j + index_y]
+        for j in range(8):
+            ret_tab[i][j] = tab[i + index_x][j]
     return ret_tab
 
 def pressed_left(event):
@@ -176,40 +170,23 @@ def pressed_right(event):
     global index_x
     if event.action != ACTION_RELEASED:
         # We can't get past the (8 - width) index or else we are out of boundary
-        height = height_temp if displayed_data == "temp" else height_humid
         index_x = 0 if min(index_x + 1, width - 8) < 0 else min(index_x + 1, width - 8)
         print(index_x)
 
-def pressed_up(event):
-    global index_y
-    if event.action != ACTION_RELEASED:
-        index_y = max(0, index_y -1)
-        print(index_y)
-
-def pressed_down(event):
-    global index_y
-    if event.action != ACTION_RELEASED:
-        height = height_temp if displayed_data == "temp" else height_humid
-        index_y = 0 if min(index_y + 1, height - 8) < 0 else min(index_y + 1, height - 8)
-        print(index_y)
-
 def pressed_middle(event):
-    global index_x, index_y, displayed_data
-    if event.action != ACTION_RELEASED:
-        if displayed_data == "temp":
-            displayed_data = "humid"
-            # Reset the index_y to the default index of the humid data_set
-            index_y = default_index_y_humid
-        else:
-            displayed_data = "temp"
-            # Reset the index_y to the default index of the temp data_set
-            index_y = default_index_y_temp
+    global index_x, displayed_data, state, debug
+    if state == "collecting":
+        if event.action == ACTION_HELD:
+            state = "displaying"
+    elif state == "displaying":
+        if event.action == ACTION_HELD and not debug:
+            state = "done"
+        elif event.action == ACTION_RELEASED:
+            debug = False
 
 # Mount the stick
 sense.stick.direction_left = pressed_left
 sense.stick.direction_right = pressed_right
-sense.stick.direction_up = pressed_up
-sense.stick.direction_down = pressed_down
 sense.stick.direction_middle = pressed_middle
 
 def create_curve(data_tab):
@@ -228,7 +205,7 @@ def create_curve(data_tab):
         Each list is a column of the full data array; [0,1]
 
     """
-    global height_temp, height_humid, width, index_y, default_index_y_temp, default_index_y_humid
+    global height_temp, height_humid, width, index_y, default_index_y_temp, default_index_y_humid, prev_index
 
     def min_max(arr, arr_size):
         """
@@ -246,64 +223,72 @@ def create_curve(data_tab):
     sense.clear()
     # The max difference between two temp; if greater than 8, then we need to move vertically
     min_data, max_data = min_max(data_tab, len(data_tab))
-    min_max_diff = max_data - min_data
+    min_max_diff = max(8, max_data - min_data)
+
+    normalized_data = data_tab.copy()
+
+    for i in range(len(data_tab)):
+        normalized_data[i] = ((data_tab[i] - min_data)*7) / min_max_diff
+    print(normalized_data)
 
     full_data_tab = []
 
     width = len(data_tab)
 
-    # We change our global variable accordingly to the displayed_data
-    # Create the full tab with every values
-    #   height = max difference between two temp
-    #   width = number of sample collected
-    #
-    #   Returns a height * width new tab
-    if displayed_data == "temp":
-        height_temp = max(8, round(min_max_diff + 1))
-        full_data_tab = [[0 for x in range(height_temp)] for y in range(width)]
-    else:
-        height_humid = max(8, round(min_max_diff + 1))
-        full_data_tab = [[0 for x in range(height_humid)] for y in range(width)]
+    full_data_tab = [[0 for x in range(8)] for y in range(width)]
 
     # The first data that we collected is gonna be centered on the y-axis
-    base_data = data_tab[0]
+    base_data = normalized_data[0]
 
     # Change the base_index depending on max variation of temp
-    base_index = round(max_data) - round(base_data)
-    # Centers the base_index
-    index_y = max(base_index - 4, 0)
+    base_index = 7 - round(base_data)
 
     # Records value for when we change displayed_data
-    if displayed_data == "temp":
-        default_index_y_temp = index_y
-    else:
-        default_index_y_humid = index_y
-
+    prev_index = -1
     for i in range(width):
-        diff = round(data_tab[i] - base_data)
-        full_data_tab[i][base_index - diff] = 1
+        diff = round(normalized_data[i] - base_data)
+        print(base_index, diff)
+        curr_index = base_index - diff
+        full_data_tab[i][curr_index] = 1
+
+        # COMMENT NEXT FULL BLOCK TO REMOVE VERTICAL PIXELS
+        if i > 0:
+            delta_index = curr_index - prev_index
+            print(delta_index)
+            if delta_index > 1:
+                for j in range(prev_index + 1, curr_index):
+                    full_data_tab[i][j] = 1
+            if delta_index < -1:
+                for j in range(curr_index + 1, prev_index):
+                    full_data_tab[i][j] = 1
+        prev_index = curr_index
+        # END OF BLOCK TO COMMENT
+
+
     return full_data_tab
 
 temp = []
 humid = []
 if len(sys.argv) == 2:
-    temp_raw, humid = collect(int(sys.argv[1]))
+    temp_raw, humid = collect()
     temp = treat_data(temp_raw, humid)
-elif len(sys.argv) == 3:
-    temp_raw, humid = collect(int(sys.argv[1]), float(sys.argv[2]))
-    temp = treat_data(temp_raw, humid)
+    if sys.argv[1] == "-t":
+        displayed_data = "temp"
+        full_temp_tab = create_curve(temp)
+    elif sys.argv[1] == "-h":
+        displayed_data = "humid"
+        full_humid_tab = create_curve(humid)
 else:
     # Dummy sample
     temp_raw = [23, 24, 25, 27, 27, 28, 29, 28, 28, 27, 27, 26, 25, 23, 33, 21, 21, 21, 20, 20, 19, 20, 21]
     humid = [60, 56, 51, 47, 44, 41, 38, 41, 41, 46, 49, 54, 60, 67, 68, 68, 70, 71, 73, 74, 75, 80, 79, 78]
     temp = treat_data(temp_raw, humid)
 
-# Create both curves
-full_humid_tab = create_curve(humid)
-displayed_data = "temp"
-full_temp_tab = create_curve(temp)
 
 while True:
     # Continuously display the current tab while listening to joystick events
     current_tab = full_temp_tab if displayed_data == "temp" else full_humid_tab
     display(current_display(current_tab))
+    if state == "done":
+        sense.clear()
+        break
