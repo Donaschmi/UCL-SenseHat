@@ -7,12 +7,9 @@ from podo_display import display_number
 sense = SenseHat()
 sense.low_light = True
 
-
-# Fonction qui renvoie le temps en ms
-current_milli_time = lambda: int(round(time() * 1000))
-
-start_time = current_milli_time()
-
+"""
+Function that returns 1 if previous_elem <= element else -1
+"""
 def direction(previous_elem, element):
 	if (previous_elem > element):
 		return -1 # descending direction
@@ -33,10 +30,7 @@ threshold = 1.40
 infinite = True
 
 
-# display red screen to show start of logging
-display = [G] * 64
-sense.set_pixels(display)
-start_time = current_milli_time()
+# display 00 at start
 display_number(0)
 
 
@@ -50,12 +44,10 @@ sense.stick.direction_any = stop
 # infinite loop, stopped on any joystick move
 while infinite:
 
-	t = current_milli_time()
 	acc = sense.get_accelerometer_raw()
 	x = acc['x']
 	y = acc['y']
 	z = acc['z']
-	data.append((x,y,z)) # append new data point !! RAM costely
 	
 	mag = sqrt(pow(x,2)+pow(y,2)+pow(z,2)) # Calculate magnitude
 	
@@ -72,10 +64,6 @@ while infinite:
 	
 	
 	sleep(0.018) # delay between 2 measures
-	
-	#if (t-start_time > 11000):
-	#	break
-
 
 # Clean before exit
 sense.clear()
