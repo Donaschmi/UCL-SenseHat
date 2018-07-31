@@ -1,4 +1,4 @@
-from sense_hat import SenseHat,ACTION_RELEASED
+from sense_emu import SenseHat,ACTION_RELEASED
 from time import sleep,time
 from math import pow,sqrt
 from podo_display import display_number
