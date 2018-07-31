@@ -84,7 +84,7 @@ def select(event):
 			# launch Podometer
 			print("Podo selected")
 			sense.clear()
-			subprocess.run(["python3", "podometre.py"])
+			subprocess.run(["python3", "../Podometre/podometre.py"])
 		elif cursor == 2:
 			# launch Humiddity
 			print("Humidity selected")

@@ -4,12 +4,14 @@ from sense_hat import SenseHat, ACTION_RELEASED
 
 sense = SenseHat()
 
-Br = [128,0,0] 
-R = [255,0,0]
-Bl = [130,50,0]
-X = [0,0,0]
-Or = [255,140,0]
-P = [150,150,150]
+# Color RGB codes
+Br = [128,0,0] 		# Brown
+R = [255,0,0] 		# Red
+Bl = [130,50,0]		# ??
+X = [0,0,0]			# None
+Or = [255,140,0]	# Orange
+P = [150,150,150]	# ??
+
 
 Temp = [X,X,X,X,X,X,X,X,
 		X,Bl,Bl,Bl,Bl,Bl,Bl,X,
@@ -18,7 +20,7 @@ Temp = [X,X,X,X,X,X,X,X,
 		X,X,X,Bl,Bl,X,X,X,
 		X,X,X,Bl,Bl,X,X,X,
 		X,X,X,Bl,Bl,X,X,X,
-		X,X,X,Bl,Bl,X,X,X]
+		X,X,X,Bl,Bl,X,X,X] # 8x8 grid for Temp icon
 
 Podo = [Or,Or,Or,Or,Or,Or,Or,Or,
 		Or,Or,Or,Or,Or,Or,Or,Or,
@@ -27,7 +29,7 @@ Podo = [Or,Or,Or,Or,Or,Or,Or,Or,
 		X,Or,X,X,X,X,Or,X,
 		X,R,R,X,X,X,R,R,
 		X,R,R,R,X,X,R,R,
-		X,X,X,X,X,X,X,X]
+		X,X,X,X,X,X,X,X] # 8x8 grid for Podometer icon
 		
 Hum = 	[X,X,X,X,X,X,X,X,
 		X,Bl,X,X,X,X,Bl,X,
@@ -36,13 +38,13 @@ Hum = 	[X,X,X,X,X,X,X,X,
 		X,Bl,Bl,Bl,Bl,Bl,Bl,X,
 		X,Bl,X,X,X,X,Bl,X,
 		X,Bl,X,X,X,X,Bl,X,
-		X,Bl,X,X,X,X,Bl,X]
+		X,Bl,X,X,X,X,Bl,X] # 8x8 grid for Humidex icon
 
-menu = {0:Temp, 1:Podo, 2:Hum}
+menu = {0:Temp, 1:Podo, 2:Hum} # Link number with icon
 
 sense.set_pixels(Temp)
 
-cursor = 0
+cursor = 0 # position in menu
 
 """
 Function used when update led needed
