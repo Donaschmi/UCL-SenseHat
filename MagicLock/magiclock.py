@@ -4,6 +4,7 @@ import os.path
 import json
 import ast
 from time import sleep, time
+from math import floor
 # Indicate which combinaison is currently beeing tried
 code_index = 0
 
@@ -74,6 +75,8 @@ ARROW = [[1, 1, 1],[0, 1, 0]]
 index = 0
 
 coding = True
+
+select = False
 
 debug = True
 
@@ -311,6 +314,28 @@ def decrypt(secret_file):
     sense.show_message(message)
 
 
+def increase_code_index():
+	"""
+	Function that increases the code_index variable and illuminates this amount of leds on the panel
+	"""
+	global code_index,sense
+	code_index += 1
+	x = (code_index-1) % 8; # get column index
+	y = (code_index-1) / 8; # get row index
+	sense.set_pixel(int(floor(x)),int(floor(y)),100,100,200) # set pixel to blue
+
+def change_color():
+	"""
+	Function that changes the cursor color from red to blue. This function is called when the user selects a digit form the numberpicker
+	"""
+	global index
+	offset = 0
+	if index % 2 == 1:
+		offset = 4
+	for i in range(3):
+		for j in range(2):
+			sense.set_pixel(i+1+offset, j, [100, 100, 200])if ARROW[j][i] == 1 else sense.set_pixel(i+1+offset, j, [0, 0, 0])
+
 """
 The following 4 functions are used in encryption mode
 
@@ -329,7 +354,7 @@ def pushed_up(event):
         global code_index, code_combinaison
         if event.action == ACTION_RELEASED:
             code_combinaison[code_index] = 1
-            code_index +=1
+            increase_code_index()
 
 def pushed_down(event):
     if state == "typing":
@@ -338,7 +363,7 @@ def pushed_down(event):
         global code_index, code_combinaison
         if event.action == ACTION_RELEASED:
             code_combinaison[code_index] = 2
-            code_index +=1
+            increase_code_index()
 
 def pushed_left(event):
     if state == "typing":
@@ -350,7 +375,7 @@ def pushed_left(event):
         global code_index, code_combinaison
         if event.action == ACTION_RELEASED:
             code_combinaison[code_index] = 3
-            code_index +=1
+            increase_code_index()
 
 def pushed_right(event):
     if state == "typing":
@@ -362,13 +387,16 @@ def pushed_right(event):
         global code_index, code_combinaison
         if event.action == ACTION_RELEASED:
             code_combinaison[code_index] = 4
-            code_index +=1
+            increase_code_index()
 
 def pushed_middle(event):
-    global message, state, code_index, code_combinaison, debug
+    global message, state, code_index, code_combinaison, debug, index, select
     if state == "typing":
         if event.action == ACTION_RELEASED:
             message += str(index)
+            select = True
+            sleep(0.3) # time the cursor will be blue (select mode)
+            select = False
             print(message)
         elif event.action == ACTION_HELD:
             state = "coding"
@@ -388,9 +416,10 @@ def pushed_middle(event):
                     return
 
             code_combinaison[code_index] = find_hemisphere(acc)
-            code_index += 1
+            increase_code_index()
         elif event.action == ACTION_HELD and not debug:
             state = "done"
+
 
 def display_number(number1, number2):
     for i in range(3):
@@ -445,8 +474,13 @@ else:
     sense.stick.direction_right = pushed_right
     sense.stick.direction_left = pushed_left
     while state == "typing":
-        display_number(NUMS[index], NUMS[index+1]) if index % 2 == 0 else display_number(NUMS[index - 1], NUMS[index])
+        if select: # if the user has selected a number, change the cursor color
+        	change_color()
+        else:
+        	display_number(NUMS[index], NUMS[index+1]) if index % 2 == 0 else display_number(NUMS[index - 1], NUMS[index])
+
     sense.show_message(message)
+    sense.show_message("Pivoter et valider vos positions et/ou diriger le joystick")
     encrypt(secret_file)
     secret_file.close()
     sense.clear()
