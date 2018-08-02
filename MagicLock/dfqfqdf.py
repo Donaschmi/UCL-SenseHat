@@ -3,7 +3,8 @@ from sense_hat import SenseHat, ACTION_PRESSED, ACTION_RELEASED, ACTION_HELD
 import os.path
 import json
 import ast
-from time import sleep, time
+from time import sleep
+
 # Indicate which combinaison is currently beeing tried
 code_index = 0
 
@@ -75,12 +76,10 @@ index = 0
 
 coding = True
 
-debug = True
-
 # Setup SenseHat
 sense = SenseHat()
 sense.low_light = True
-sense.clear()
+
 def close_enough(x, value):
     """
     Checks if the current value is close enough to x
@@ -99,29 +98,6 @@ def close_enough(x, value):
     """
     threshold = 0.12
     return  x > (value - threshold) and x < (value + threshold)
-
-def find_hemisphere(acc):
-    x = acc['x']
-    y = acc['y']
-    z = acc['z']
-    print(acc)
-    if x < 0 and y < 0 and z < 0:
-        return 5
-    elif x < 0 and y < 0 and z > 0:
-        return 6
-    elif x < 0 and y > 0 and z < 0:
-        return 7
-    elif x < 0 and y > 0 and z > 0:
-        return 8
-    if x > 0 and y < 0 and z < 0:
-        return 9
-    elif x > 0 and y < 0 and z > 0:
-        return 10
-    elif x > 0 and y > 0 and z < 0:
-        return 11
-    elif x > 0 and y > 0 and z > 0:
-        return 12
-
 
 
 def isValid(secret_file):
@@ -155,10 +131,15 @@ def isValid(secret_file):
     # For each line in lines
     for i in range(code_num):
         if not lines[i].isdigit():
-            return False
-        else: # Line is a number
-            if int(lines[i]) < 1 or int(lines[i]) > 12:
+            # Convert String to JSON
+            h = ast.literal_eval(lines[i])
+
+            # If the line is a valid dictionnary
+            if type(h) is dict:
+                code_combinaison[code_index]= h
+            else:
                 return False
+        else: # Line is a number
             code_combinaison[code_index] = int(lines[i])
 
         code_index += 1
@@ -294,10 +275,19 @@ def decrypt(secret_file):
             # Middle pressed
             else:
                 # We are expecting an integer and got a dictionnary, reset the locks
+                if not type(code_combinaison[code_index]) is dict:
+                    code_index = reset_display()
+                    continue
 
                 acc = sense.get_accelerometer_raw()
+                x = acc['x']
+                y = acc['y']
+                z = acc['z']
 
-                if find_hemisphere(acc) == code_combinaison[code_index]:
+                # If the value is close enough
+                if (close_enough(x,code_combinaison[code_index]['x'])
+                        and close_enough(y,code_combinaison[code_index]['y'])
+                        and close_enough(z,code_combinaison[code_index]['z'])):
                     code_index = advance(code_index)
                 else:
                     code_index = reset_display()
@@ -310,6 +300,14 @@ def decrypt(secret_file):
     sleep(2)
     sense.show_message(message)
 
+def pushed_middle(event):
+    """
+    In encrypting mode, will record the position of the raspberry and save it, will increment the index
+    """
+    global code_index, code_combinaison
+    if event.action == ACTION_PRESSED:
+        code_combinaison[code_index] = sense.get_accelerometer_raw()
+        code_index += 1
 
 """
 The following 4 functions are used in encryption mode
@@ -365,32 +363,18 @@ def pushed_right(event):
             code_index +=1
 
 def pushed_middle(event):
-    global message, state, code_index, code_combinaison, debug
+    global message, state
     if state == "typing":
         if event.action == ACTION_RELEASED:
             message += str(index)
             print(message)
         elif event.action == ACTION_HELD:
             state = "coding"
-            sleep(2)
 
     elif state == "coding":
-        if event.action == ACTION_PRESSED:
-            debug = False
-        if event.action == ACTION_RELEASED and not debug:
-            acc = sense.get_accelerometer_raw()
-            for axe in acc:
-                error = acc[axe] * 20
-                print(error)
-                if error < -2 or error > 2:
-                    print("ok")
-                else:
-                    return
-
-            code_combinaison[code_index] = find_hemisphere(acc)
-            code_index += 1
-        elif event.action == ACTION_HELD and not debug:
+        if event.action == ACTION_HELD:
             state = "done"
+
 
 def display_number(number1, number2):
     for i in range(3):
@@ -446,6 +430,7 @@ else:
     sense.stick.direction_left = pushed_left
     while state == "typing":
         display_number(NUMS[index], NUMS[index+1]) if index % 2 == 0 else display_number(NUMS[index - 1], NUMS[index])
+    else:
     sense.show_message(message)
     encrypt(secret_file)
     secret_file.close()
