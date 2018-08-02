@@ -4,6 +4,7 @@ import os.path
 import json
 import ast
 from time import sleep, time
+from math import floor
 # Indicate which combinaison is currently beeing tried
 code_index = 0
 
@@ -304,6 +305,13 @@ def decrypt(secret_file):
     sense.show_message(message)
 
 
+def increase_code_index():
+	global code_index,sense
+	code_index += 1
+	x = (code_index-1) % 8;
+	y = (code_index-1) / 8;
+	sense.set_pixel(int(floor(x)),int(floor(y)),100,100,200)
+
 """
 The following 4 functions are used in encryption mode
 
@@ -322,7 +330,7 @@ def pushed_up(event):
         global code_index, code_combinaison
         if event.action == ACTION_RELEASED:
             code_combinaison[code_index] = 1
-            code_index +=1
+            increase_code_index()
 
 def pushed_down(event):
     if state == "typing":
@@ -331,7 +339,7 @@ def pushed_down(event):
         global code_index, code_combinaison
         if event.action == ACTION_RELEASED:
             code_combinaison[code_index] = 2
-            code_index +=1
+            increase_code_index()
 
 def pushed_left(event):
     if state == "typing":
@@ -343,7 +351,7 @@ def pushed_left(event):
         global code_index, code_combinaison
         if event.action == ACTION_RELEASED:
             code_combinaison[code_index] = 3
-            code_index +=1
+            increase_code_index()
 
 def pushed_right(event):
     if state == "typing":
@@ -355,7 +363,7 @@ def pushed_right(event):
         global code_index, code_combinaison
         if event.action == ACTION_RELEASED:
             code_combinaison[code_index] = 4
-            code_index +=1
+            increase_code_index()
 
 def change_color():
 	global index
@@ -384,9 +392,10 @@ def pushed_middle(event):
             debug = False
         if event.action == ACTION_RELEASED and not debug:
             code_combinaison[code_index] = sense.get_accelerometer_raw()
-            code_index += 1
+            increase_code_index()
         elif event.action == ACTION_HELD and not debug:
             state = "done"
+			
 
 def display_number(number1, number2):
     for i in range(3):
