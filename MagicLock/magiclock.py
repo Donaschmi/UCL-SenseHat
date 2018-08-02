@@ -306,11 +306,26 @@ def decrypt(secret_file):
 
 
 def increase_code_index():
+	"""
+	Function that increases the code_index variable and illuminates this amount of leds on the panel
+	"""
 	global code_index,sense
 	code_index += 1
-	x = (code_index-1) % 8;
-	y = (code_index-1) / 8;
-	sense.set_pixel(int(floor(x)),int(floor(y)),100,100,200)
+	x = (code_index-1) % 8; # get column index
+	y = (code_index-1) / 8; # get row index
+	sense.set_pixel(int(floor(x)),int(floor(y)),100,100,200) # set pixel to blue
+
+def change_color():
+	"""
+	Function that changes the cursor color from red to blue. This function is called when the user selects a digit form the numberpicker
+	"""
+	global index
+	offset = 0
+	if index % 2 == 1:
+		offset = 4
+	for i in range(3):
+		for j in range(2):
+			sense.set_pixel(i+1+offset, j, [100, 100, 200])if ARROW[j][i] == 1 else sense.set_pixel(i+1+offset, j, [0, 0, 0])
 
 """
 The following 4 functions are used in encryption mode
@@ -365,22 +380,13 @@ def pushed_right(event):
             code_combinaison[code_index] = 4
             increase_code_index()
 
-def change_color():
-	global index
-	offset = 0
-	if index % 2 == 1:
-		offset = 4
-	for i in range(3):
-		for j in range(2):
-			sense.set_pixel(i+1+offset, j, [100, 100, 200])if ARROW[j][i] == 1 else sense.set_pixel(i+1+offset, j, [0, 0, 0])
-
 def pushed_middle(event):
     global message, state, code_index, code_combinaison, debug, index, select
     if state == "typing":
         if event.action == ACTION_RELEASED:
             message += str(index)
-            select = True
-            sleep(0.3)
+            select = True 
+            sleep(0.3) # time the cursor will be blue (select mode)
             select = False
             print(message)
         elif event.action == ACTION_HELD:
@@ -450,13 +456,13 @@ else:
     sense.stick.direction_right = pushed_right
     sense.stick.direction_left = pushed_left
     while state == "typing":
-        if select:
+        if select: # if the user has selected a number, change the cursor color
         	change_color()
         else:
         	display_number(NUMS[index], NUMS[index+1]) if index % 2 == 0 else display_number(NUMS[index - 1], NUMS[index])
         	
     sense.show_message(message)
-    print("test")
+    sense.show_message("Pivoter et valider vos positions et/ou diriger le joystick")
     encrypt(secret_file)
     secret_file.close()
     sense.clear()
