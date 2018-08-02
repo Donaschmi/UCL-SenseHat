@@ -280,11 +280,16 @@ if len(sys.argv) == 2:
         full_humid_tab = create_curve(humid)
 else:
     # Dummy sample
-    temp_raw = [23, 24, 25, 27, 27, 28, 29, 28, 28, 27, 27, 26, 25, 23, 33, 21, 21, 21, 20, 20, 19, 20, 21]
-    humid = [60, 56, 51, 47, 44, 41, 38, 41, 41, 46, 49, 54, 60, 67, 68, 68, 70, 71, 73, 74, 75, 80, 79, 78]
+    #temp_raw = [23, 24, 25, 27, 27, 28, 29, 28, 28, 27, 27, 26, 25, 23, 33, 21, 21, 21, 20, 20, 19, 20, 21]
+    #humid = [60, 56, 51, 47, 44, 41, 38, 41, 41, 46, 49, 54, 60, 67, 68, 68, 70, 71, 73, 74, 75, 80, 79, 78]
+    #temp = treat_data(temp_raw, humid)
+    temp_raw, humid = collect()
     temp = treat_data(temp_raw, humid)
-
-
+    displayed_data = "temp"
+    full_temp_tab = create_curve(temp)
+    displayed_data = "humid"
+    full_humid_tab = create_curve(humid)
+    
 while True:
     # Continuously display the current tab while listening to joystick events
     current_tab = full_temp_tab if displayed_data == "temp" else full_humid_tab
