@@ -33,7 +33,7 @@ Ready = [X,X,X,X,R,X,X,R,
 step_count = 0 		# Step counter
 prev_mag = 0.0 		# previous registered magnitude value
 prev_direction = 1 	# previous direction the data makes
-threshold = 1.37 	# Threshold value of magnitude
+threshold = 1.4 	# Threshold value of magnitude
 loop = True 		# Boolean variable for loop
 
 sense.set_pixels(Ready) # display 'ok'
