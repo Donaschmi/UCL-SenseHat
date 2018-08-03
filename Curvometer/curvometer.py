@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from sense_hat import SenseHat, ACTION_RELEASED, ACTION_PRESSED, ACTION_HELD
-from time import sleep
+from time import sleep, time
 from math import log, exp
 import sys
 import subprocess
@@ -13,34 +13,51 @@ index_x = 0 # The current x-pos of the top_left pixel
 default_index_x = 0
 width = 0 # Equals the number of samples collected
 prev_index = -1
-displayed_data = "humid"
+displayed_data = "temp"
 state = "collecting"
 debug = True
-def collect(time=0.5):
-    """
-    Collect data (temp, humid) over time and store it in array
+min_temp  = 99
+max_temp = 0
+min_humid  = 99
+max_humid = 0
 
-    Parameters
-    ----------
-    number: int
-        The number of samples to collect
-    [time]: float
-        The rate at which sample is collected in seconds
 
-    Returns
-    -------
-    tab_temp: float[]
-        Raw temperature collected
-    tab_humid: float[]
-        Raw humidity collected in percentages
-    """
-    tab_temp = []
-    tab_humid = []
-    while state == "collecting":
-        tab_temp.append(sense.temperature)
-        tab_humid.append(sense.humidity)
-        sleep(time) # Rate of collecting
-    return (tab_temp, tab_humid)
+R = [255, 0, 0]
+G = [127, 255, 0]
+B = [0, 0, 255]
+O = [0, 0, 0]
+
+ZERO = [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]]
+ONE = [[0,1,0],[0,1,0],[0,1,0],[0,1,0],[0,1,0]]
+TWO = [[1,1,1],[0,0,1],[0,1,0],[1,0,0],[1,1,1]]
+THREE = [[1,1,1],[0,0,1],[1,1,1],[0,0,1],[1,1,1]]
+FOUR = [[1,0,0],[1,0,1],[1,1,1],[0,0,1],[0,0,1]]
+FIVE = [[1,1,1],[1,0,0],[1,1,1],[0,0,1],[1,1,1]]
+SIX = [[1,1,1],[1,0,0],[1,1,1],[1,0,1],[1,1,1]]
+SEVEN = [[1,1,1],[0,0,1],[0,1,0],[1,0,0],[1,0,0]]
+EIGHT = [[1,1,1],[1,0,1],[1,1,1],[1,0,1],[1,1,1]]
+NINE = [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]]
+
+NUMS = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE]
+
+
+H_MAX = [[O,B,O,B,O,O,B,O],
+        [O,B,B,B,O,B,O,B],
+        [O,B,O,B,O,O,O,O]]
+
+H_MIN = [[O,B,O,B,O,B,O,B],
+        [O,B,B,B,O,O,B,O],
+        [O,B,O,B,O,O,O,O]]
+
+T_MAX = [[O,R,R,R,O,O,R,O],
+        [O,O,R,O,O,R,O,R],
+        [O,O,R,O,O,O,O,O]]
+
+T_MIN = [[O,R,R,R,O,R,O,R],
+        [O,O,R,O,O,O,R,O],
+        [O,O,R,O,O,O,O,O]]
+
+top_display = {"h_max": H_MAX, "h_min": H_MIN, "t_max": T_MAX, "t_min": T_MIN}
 
 def humidex(temp, humid):
     """
@@ -87,12 +104,10 @@ def correct_temp(temp_tab):
     """
     output = subprocess.check_output("cat /sys/class/thermal/thermal_zone0/temp", shell=True)
     cpu_temp = int(output)/1000
-    temp_calibrated = [None] * len(temp_tab)
-    for i in range(len(temp_tab)):
-        temp_calibrated[i] = temp_tab[i] - ((cpu_temp - temp_tab[i]/1.5))
+    temp_calibrated = temp_tab - ((cpu_temp - temp_tab)/1.5)
     return temp_calibrated
 
-def treat_data(temp_tab, humid_tab):
+def treat_data(temp, humid):
     """
     Transform each temperature into humidex
 
@@ -108,11 +123,8 @@ def treat_data(temp_tab, humid_tab):
     new_humidex: float[]
         New Humidex values
     """
-    length = len(temp_tab)
-    new_humidex = [None] * length
-    new_temp_tab = correct_temp(temp_tab)
-    for i in range(length):
-        new_humidex[i] = humidex(new_temp_tab[i], humid_tab[i])
+    new_temp_tab = correct_temp(temp)
+    new_humidex = humidex(new_temp_tab, humid)
     return new_humidex
 
 def display(tab):
@@ -164,32 +176,37 @@ def pressed_left(event):
     if event.action != ACTION_RELEASED:
         # We can't get behind index 0
         index_x = max(0, index_x - 1)
-        print(index_x)
 
 def pressed_right(event):
     global index_x
     if event.action != ACTION_RELEASED:
         # We can't get past the (8 - width) index or else we are out of boundary
         index_x = 0 if min(index_x + 1, width - 8) < 0 else min(index_x + 1, width - 8)
-        print(index_x)
 
 def pressed_middle(event):
     global index_x, displayed_data, state, debug
-    if state == "collecting":
-        if event.action == ACTION_HELD:
-            state = "displaying"
-    elif state == "displaying":
-        if event.action == ACTION_HELD and not debug:
-            state = "done"
-        elif event.action == ACTION_RELEASED:
-            debug = False
+    if event.action == ACTION_RELEASED:
+        if displayed_data == "humid":
+            displayed_data = "t_min"
+        elif displayed_data == "t_min":
+            displayed_data = "t_max"
+        elif displayed_data == "t_max":
+            displayed_data = "temp"
+        elif displayed_data == "temp":
+            displayed_data = "h_min"
+        elif displayed_data == "h_min":
+            displayed_data = "h_max"
+        elif displayed_data == "h_max":
+            displayed_data = "humid"
+
+    sense.clear()
 
 # Mount the stick
 sense.stick.direction_left = pressed_left
 sense.stick.direction_right = pressed_right
 sense.stick.direction_middle = pressed_middle
 
-def create_curve(data_tab):
+def create_curve(data_tab, type):
     """
     Create a list of arrays where each array is a column containing exactly one "1"
     which is the the value at the index in data_tab
@@ -205,7 +222,7 @@ def create_curve(data_tab):
         Each list is a column of the full data array; [0,1]
 
     """
-    global height_temp, height_humid, width, index_y, default_index_y_temp, default_index_y_humid, prev_index
+    global width, prev_index, min_temp, max_temp, max_humid, min_humid
 
     def min_max(arr, arr_size):
         """
@@ -220,20 +237,26 @@ def create_curve(data_tab):
                 min_t = arr[i]
         return min_t, max_t
 
-    sense.clear()
     # The max difference between two temp; if greater than 8, then we need to move vertically
     min_data, max_data = min_max(data_tab, len(data_tab))
     min_max_diff = max(8, max_data - min_data)
 
-    normalized_data = data_tab.copy()
+    if type == "temp":
+        min_temp = min(min_data, min_temp)
+        max_temp = max(max_data, max_temp)
+    elif type == "humid":
+        min_humid = min(min_data, min_humid)
+        max_humid = max(max_data, max_humid)
+
+    width = len(data_tab)
+    normalized_data = [None] * width
 
     for i in range(len(data_tab)):
         normalized_data[i] = ((data_tab[i] - min_data)*7) / min_max_diff
-    print(normalized_data)
+
 
     full_data_tab = []
 
-    width = len(data_tab)
 
     full_data_tab = [[0 for x in range(8)] for y in range(width)]
 
@@ -247,14 +270,12 @@ def create_curve(data_tab):
     prev_index = -1
     for i in range(width):
         diff = round(normalized_data[i] - base_data)
-        print(base_index, diff)
         curr_index = base_index - diff
         full_data_tab[i][curr_index] = 1
 
         # COMMENT NEXT FULL BLOCK TO REMOVE VERTICAL PIXELS
         if i > 0:
             delta_index = curr_index - prev_index
-            print(delta_index)
             if delta_index > 1:
                 for j in range(prev_index + 1, curr_index):
                     full_data_tab[i][j] = 1
@@ -267,33 +288,48 @@ def create_curve(data_tab):
 
     return full_data_tab
 
+def display_number(number1, number2):
+    top = top_display[displayed_data]
+    ret_tab = [O]*64
+    for i in range(8):
+        for j in range(3):
+            ret_tab[8 * j + i] = top[j][i]
+    for i in range(3):
+        for j in range(5):
+            ret_tab[8 * (j+3) + i+1] = [255, 255, 255] if number1[j][i] == 1 else [0, 0, 0]
+            ret_tab[8 * (j+3) + i+5] = [255, 255, 255] if number2[j][i] == 1 else [0, 0, 0]
+    sense.set_pixels(ret_tab)
+
+
 temp = []
 humid = []
-if len(sys.argv) == 2:
-    temp_raw, humid = collect()
-    temp = treat_data(temp_raw, humid)
-    if sys.argv[1] == "-t":
-        displayed_data = "temp"
-        full_temp_tab = create_curve(temp)
-    elif sys.argv[1] == "-h":
-        displayed_data = "humid"
-        full_humid_tab = create_curve(humid)
-else:
-    # Dummy sample
-    #temp_raw = [23, 24, 25, 27, 27, 28, 29, 28, 28, 27, 27, 26, 25, 23, 33, 21, 21, 21, 20, 20, 19, 20, 21]
-    #humid = [60, 56, 51, 47, 44, 41, 38, 41, 41, 46, 49, 54, 60, 67, 68, 68, 70, 71, 73, 74, 75, 80, 79, 78]
-    #temp = treat_data(temp_raw, humid)
-    temp_raw, humid = collect()
-    temp = treat_data(temp_raw, humid)
-    displayed_data = "temp"
-    full_temp_tab = create_curve(temp)
-    displayed_data = "humid"
-    full_humid_tab = create_curve(humid)
-    
+curr_time = time()
+
+full_temp_tab = []
+full_humid_tab = []
+humidex_tab = []
 while True:
+    if time() - curr_time > 1:
+        temp.append(sense.temperature)
+        humid.append(sense.humidity)
+
+        humidex_tab.append(treat_data(temp[len(temp)-1], humid[len(humid)-1]))
+        full_humid_tab = create_curve(humid, "humid")
+        full_temp_tab = create_curve(humidex_tab, "temp")
+        curr_time = time()
+    if displayed_data == "h_max":
+        display_number(NUMS[int(max_humid / 10)], NUMS[int(max_humid % 10)])
+    elif displayed_data == "h_min":
+        display_number(NUMS[int(min_humid / 10)], NUMS[int(min_humid % 10)])
+    elif displayed_data == "t_max":
+        display_number(NUMS[int(max_temp / 10)], NUMS[int(max_temp % 10)])
+    elif displayed_data == "t_min":
+        display_number(NUMS[int(min_temp / 10)], NUMS[int(min_temp % 10)])
+    else:
+        current_tab = full_temp_tab if displayed_data == "temp" else full_humid_tab
+        display(current_display(current_tab))
+
     # Continuously display the current tab while listening to joystick events
-    current_tab = full_temp_tab if displayed_data == "temp" else full_humid_tab
-    display(current_display(current_tab))
     if state == "done":
         sense.clear()
         break
