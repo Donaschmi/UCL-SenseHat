@@ -3,6 +3,7 @@ from sense_hat import SenseHat, ACTION_PRESSED, ACTION_RELEASED, ACTION_HELD
 import os.path
 import json
 import ast
+import sys
 from time import sleep, time
 from math import floor
 # Indicate which combinaison is currently beeing tried
@@ -18,6 +19,8 @@ code_num = 0
 message = ""
 
 state = ""
+
+tries = 0
 
 # Color code
 R = [255, 0, 0]
@@ -61,6 +64,15 @@ wrong = [O,O,R,R,R,R,O,O,
         R,O,O,O,O,R,O,R,
         O,R,O,O,O,O,R,O,
         O,O,R,R,R,R,O,O]
+
+finished = 	[O,O,O,O,O,O,O,O,
+			O,O,O,O,O,O,O,O,
+			O,O,O,O,O,O,O,G,
+			O,O,O,O,O,O,G,G,
+			O,G,O,O,O,G,O,G,
+			O,O,G,O,G,O,O,O,
+			O,O,O,G,O,O,O,O,
+			O,O,O,O,O,O,O,O]
 
 # The default display screen
 display = [O] * 64
@@ -109,30 +121,34 @@ def close_enough(x, value):
         True if value is close enough to x with a threshold factor of 0.12, else False
     """
     threshold = 0.12
-    return  x > (value - threshold) and x < (value + threshold)
+    return  x >= (value - threshold) and x <= (value + threshold)
 
-def find_hemisphere(acc):
-    x = acc['x']
-    y = acc['y']
-    z = acc['z']
-    print(acc)
-    if x < 0 and y < 0 and z < 0:
+def find_direction(acc):
+    x = round(acc['x'])
+    y = round(acc['y'])
+    z = round(acc['z'])
+
+    # Print the color only to help to locate them on the RPI, should be removed once deployed
+    if x == 1 and y == 0 and z == 0:
+        print("red")
         return 5
-    elif x < 0 and y < 0 and z > 0:
+    elif x == -1 and y == 0 and z == 0:
+        print("blue")
         return 6
-    elif x < 0 and y > 0 and z < 0:
+    elif x == 0 and y == 1 and z == 0:
+        print("green")
         return 7
-    elif x < 0 and y > 0 and z > 0:
+    elif x == 0 and y == -1 and z == 0:
+        print("yellow")
         return 8
-    if x > 0 and y < 0 and z < 0:
+    elif x == 0 and y == 0 and z == 1:
+        print("orange")
         return 9
-    elif x > 0 and y < 0 and z > 0:
+    elif x == 0 and y == 0 and z == -1:
+        print("grey")
         return 10
-    elif x > 0 and y > 0 and z < 0:
+    else:
         return 11
-    elif x > 0 and y > 0 and z > 0:
-        return 12
-
 
 
 def isValid(secret_file):
@@ -168,7 +184,7 @@ def isValid(secret_file):
         if not lines[i].isdigit():
             return False
         else: # Line is a number
-            if int(lines[i]) < 1 or int(lines[i]) > 12:
+            if int(lines[i]) < 1 or int(lines[i]) > 10:
                 return False
             code_combinaison[code_index] = int(lines[i])
 
@@ -223,6 +239,13 @@ def reset_display():
     -: int
         Returns 0
     """
+    global tries
+    tries += 1
+    if tries > 5:
+        sense.set_pixels(wrong)
+        sleep(1)
+        sense.clear()
+        sys.exit(1)
     for i in range(code_num):
         display[i] = R
     sense.set_pixels(display)
@@ -274,12 +297,18 @@ def decrypt(secret_file):
     while event.action != ACTION_RELEASED:
         event = sense.stick.wait_for_event()
 
+    sense.stick.direction_middle = pushed_middle_de
+    sense.stick.direction_up = pushed_up_de
+    sense.stick.direction_down = pushed_down_de
+    sense.stick.direction_right = pushed_right_de
+    sense.stick.direction_left = pushed_left_de
+
     if code_num == 0:
         sense.set_pixels(unlocked)
         sleep(2)
         sense.show_message(message)
         return
-
+    sense.clear()
     # Display the number of locks, the red are the locked ones and the green the unlocked
     for i in range(code_num):
         display[i] = R
@@ -289,30 +318,6 @@ def decrypt(secret_file):
     locked = True
     print("Pivoter puis valider la position ou diriger le joystick dans une direction")
     while locked:
-        event = sense.stick.wait_for_event()
-
-        # If a joystick action occured
-        if event.action == ACTION_PRESSED:
-            if event.direction != "middle":
-                # If we got a direction and we are not expecting a dictionnary
-                if (not type(code_combinaison[code_index]) is dict) and (translate(code_combinaison[code_index]) == event.direction):
-                    code_index = advance(code_index)
-
-                # If we were expecting a dictionnary or the direction is wrong
-                else:
-                    code_index = reset_display()
-
-            # Middle pressed
-            else:
-                # We are expecting an integer and got a dictionnary, reset the locks
-
-                acc = sense.get_accelerometer_raw()
-
-                if find_hemisphere(acc) == code_combinaison[code_index]:
-                    code_index = advance(code_index)
-                else:
-                    code_index = reset_display()
-
         # If their are no more locked locks
         if code_index >= len(code_combinaison):
             locked = False
@@ -322,12 +327,10 @@ def decrypt(secret_file):
     sense.show_message(message)
 
 
-def increase_code_index():
+def display_code_index():
         """
         Function that increases the code_index variable and illuminates this amount of leds on the panel
         """
-        global code_index,sense
-        code_index += 1
         sense.clear()
         for i in range(code_index):
             x = i % 8; # get column index
@@ -336,7 +339,8 @@ def increase_code_index():
 
 def change_color():
         """
-        Function that changes the cursor color from red to blue. This function is called when the user selects a digit form the numberpicker
+        Function that changes the cursor color from red to blue.
+        This function is called when the user selects a digit form the numberpicker
         """
         global index
         offset = 0
@@ -357,25 +361,27 @@ When a joystick action other than the middle one occure, save it and increment t
 4 : right
 """
 
-def pushed_up(event):
+def pushed_up_en(event):
     if state == "typing":
         pass
     else:
         global code_index, code_combinaison
         if event.action == ACTION_RELEASED:
             code_combinaison[code_index] = 1
-            increase_code_index()
+            code_index += 1
+            display_code_index()
 
-def pushed_down(event):
+def pushed_down_en(event):
     if state == "typing":
         pass
     else:
         global code_index, code_combinaison
         if event.action == ACTION_RELEASED:
             code_combinaison[code_index] = 2
-            increase_code_index()
+            code_index += 1
+            display_code_index()
 
-def pushed_left(event):
+def pushed_left_en(event):
     if state == "typing":
         global index
         if event.action != ACTION_PRESSED:
@@ -385,9 +391,10 @@ def pushed_left(event):
         global code_index, code_combinaison
         if event.action == ACTION_RELEASED:
             code_combinaison[code_index] = 3
-            increase_code_index()
+            code_index += 1
+            display_code_index()
 
-def pushed_right(event):
+def pushed_right_en(event):
     if state == "typing":
         global index
         if event.action != ACTION_PRESSED:
@@ -397,9 +404,10 @@ def pushed_right(event):
         global code_index, code_combinaison
         if event.action == ACTION_RELEASED:
             code_combinaison[code_index] = 4
-            increase_code_index()
+            code_index += 1
+            display_code_index()
 
-def pushed_middle(event):
+def pushed_middle_en(event):
     global message, state, code_index, code_combinaison, debug, index, select
     if state == "typing":
         if event.action == ACTION_RELEASED:
@@ -407,7 +415,6 @@ def pushed_middle(event):
             select = True
             sleep(0.3) # time the cursor will be blue (select mode)
             select = False
-            print(message)
         elif event.action == ACTION_HELD:
             state = "coding"
             sleep(2)
@@ -417,19 +424,60 @@ def pushed_middle(event):
             debug = False
         if event.action == ACTION_RELEASED and not debug:
             acc = sense.get_accelerometer_raw()
-            for axe in acc:
-                error = acc[axe] * 20
-                print(error)
-                if error < -2 or error > 2:
-                    print("ok")
-                else:
-                    sense.set_pixels(wrong)
-                    return
+            direction = find_direction(acc)
+            if direction == 11:
+                sense.set_pixels(wrong)
+                sleep(1)
+                sense.clear()
+                display_code_index()
+                return
 
-            code_combinaison[code_index] = find_hemisphere(acc)
-            increase_code_index()
+            code_combinaison[code_index] = direction
+            code_index += 1
+            display_code_index()
         elif event.action == ACTION_HELD and not debug:
             state = "done"
+
+def pushed_up_de(event):
+    global code_index
+    if event.action == ACTION_RELEASED:
+        if code_combinaison[code_index] == 1:
+            code_index = advance(code_index)
+        else:
+            code_index = reset_display()
+
+def pushed_down_de(event):
+    global code_index
+    if event.action == ACTION_RELEASED:
+        if code_combinaison[code_index] == 2:
+            code_index = advance(code_index)
+        else:
+            code_index = reset_display()
+
+def pushed_left_de(event):
+    global code_index
+    if event.action == ACTION_RELEASED:
+        if code_combinaison[code_index] == 3:
+            code_index = advance(code_index)
+        else:
+            code_index = reset_display()
+
+def pushed_right_de(event):
+    global code_index
+    if event.action == ACTION_RELEASED:
+        if code_combinaison[code_index] == 4:
+            code_index = advance(code_index)
+        else:
+            code_index = reset_display()
+
+def pushed_middle_de(event):
+    global code_index
+    if event.action == ACTION_RELEASED:
+        acc = sense.get_accelerometer_raw()
+        if find_direction(acc) == code_combinaison[code_index]:
+            code_index = advance(code_index)
+        else:
+            code_index = reset_display()
 
 
 def display_number(number1, number2):
@@ -461,7 +509,6 @@ def encrypt(secret_file):
     global code_combinaison
 
     # Wait for the message to be entered
-    # ANY action performed before will be the locks
     while state == "coding":
         pass
     for i in range(len(code_combinaison)):
@@ -479,11 +526,11 @@ else:
     secret_file = open("secretKey.txt", "w")
     state = "typing"
     # Bind the joystick actions
-    sense.stick.direction_middle = pushed_middle
-    sense.stick.direction_up = pushed_up
-    sense.stick.direction_down = pushed_down
-    sense.stick.direction_right = pushed_right
-    sense.stick.direction_left = pushed_left
+    sense.stick.direction_middle = pushed_middle_en
+    sense.stick.direction_up = pushed_up_en
+    sense.stick.direction_down = pushed_down_en
+    sense.stick.direction_right = pushed_right_en
+    sense.stick.direction_left = pushed_left_en
     while state == "typing":
         if select: # if the user has selected a number, change the cursor color
         	change_color()
@@ -491,7 +538,10 @@ else:
         	display_number(NUMS[index], NUMS[index+1]) if index % 2 == 0 else display_number(NUMS[index - 1], NUMS[index])
 
     sense.show_message(message)
-    #sense.show_message("Pivoter et valider vos positions et/ou diriger le joystick")
+    #sense.show_message("Pivotez et validez vos positions et/ou diriger le joystick", scroll_speed=0.05)
+    sense.set_pixels(question_mark)
     encrypt(secret_file)
     secret_file.close()
+    sense.set_pixels(finished)
+    sleep(1)
     sense.clear()
