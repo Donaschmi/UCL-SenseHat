@@ -1,12 +1,20 @@
 # UCL-SenseHat
 
+## Fichiers
+
+* __podometre.py__: lance un podomètre simple qui va compter vos pas en temps réelle. Pour l'arrêter il suffit d'appuyer sur le joystick. Le nombre de pas effectué restera afficher. (Mettre la partie USB du raspberry dans votre poche)
+* __podo_display.py__: contient des méthodes pour l'affichage de numéros (0-99) sur le sense hat LED panel (utiliser dans podov2.py, podometre.py et podo_goal.py
+* __podo_goal.py__: lance un selectionneur de numéro qui définira le nombre de pas a effectué. Qaund le nombre de pas est atteind, pour avez acces à un graph de la température enregistré durant la marche et de l'humidité.
+* __podov2.py__: lance le podomètre. Quand on l'arrête, on peut changer de vue (graphe température, graphe humidité, nombre de pas) en appuyant sur le joystick
+* __findPeaks.py__: Fichier avec des fonctions simple pour détecter des pics deans des tableaux 1D (pas utiliser)
+* __README.md__: Ce fichier ci
+* __exp_data__: dossier avec des fichiers .hat qui contienne 10s de données capteur du sense hat. (+- 23 pas) Utile avec les commande sense_play de la librairie sense_emu pour tester.
 
 ## Podometre
 
-Le podomètre enregistre le nombre de pas effectués par un randonneur en utilisant l'accéléromètre du sense hat. Le nombre de pas est affichés sur l'écran (limite d'affichage est de 0 à 99). P
-Après le lancement du script, il faut bouger le joystick pour débuter le comptage en temps réel. Pour l'arreter il suffit de bouger le joystick.
+Le podomètre enregistre le nombre de pas effectués par un randonneur en utilisant l'accéléromètre du sense hat. Le nombre de pas est affiché sur l'écran (limite d'affichage est de 0 à 99). Après le lancement du script, il faut bouger le joystick pour débuter le comptage en temps réel. Pour l'arreter il suffit de bouger le joystick. Selon la version, après l'arrêt des graphes de la température et humidité sont afiché ou non.
 
-### Etapes à suivre
+### Etapes suivi durant l'implementation d'un simple podomètre
 
 1. Lire les données de l'accéléromètre
 
@@ -18,6 +26,7 @@ Après le lancement du script, il faut bouger le joystick pour débuter le compt
 
 * Consulter la documentation concernant l'accéléromètre, température, humidité
 * utiliser les libraries mathématique de base de python pour faire des racines carrées, exponentiel, arondissement
+* tableaux
 
 ### Difficultés
 
@@ -37,9 +46,6 @@ Il est facile d'enregistrer la valeurs des différents capteurs sur une certaine
 
 * Marcher un nombre de pas définie (fait: podo_goal.py)
 * Afficher des plus grands nombres de pas tout en conservant la lisibilité
-
-### Données de Test
-Les fichiers .hat dans le répertoire exp_data sont des enregistrements d'une marche de 10s. Environ 23 pas ont été effectué pour tous les fichiers.
 
 ### Test with sense_play
 to test the podometer, please use the following command:
