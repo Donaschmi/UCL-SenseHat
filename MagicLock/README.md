@@ -1,11 +1,32 @@
 # UCL-SenseHat
 
+# Fichiers
+
+`magiclock.py` : Script de l'encodeur/décodeur de message secret
+
+`numberpicker.py` : Script permettant d'afficher des numéro de 0 à 9 et de les sélectionner avec le joystick
+
 ## MagicLock
 Le magic-lock est un moyen de cacher un message secret. Pour déverrouiller l'appareil et lire le message, l'utilisateur doit pivoter le raspberry dans une position et la valider à l'aide du joystick. Il peut aussi utiliser la direction du joystick comme 'position'. Si la position correspond à celle demandée, ce verrou est déverouillé. Le nombre de combinaison à réaliser dans l'ordre est compris entre 1 et 64 et est choisi par la personne cryptant le message.
+
+Les positions valides sont les suivantes :
+
+**{'z': 1, 'x': 0, 'y': 0} => orange => HAUT**
+
+**{'z': -1, 'x': 0, 'y': 0} => grey => BAS**
+
+**{'z': 0, 'x': 1, 'y': 0} => red => GAUCHE**
+
+**{'z': 0, 'x': -1, 'y': -0} => blue => DROITE**
+
+**{'z': -0, 'x': -0, 'y': 1} => green => ARRIERE**
+
+**{'z': -0, 'x': 0, 'y': -1} => yellow => AVANT**
+
 Si aucun message n'existe, l'utilisateur peut créer sa propre combinaison et ensuite insérer son message uniquement avec le sense hat.
 
 ### Utilisation
-Pour lancer le script: __python3 magiclock.py__
+Pour lancer le script: `python3 magiclock.py`
 
 Si aucun ficher __secretKey.txt__ existe dans le même répertoire où se trouve le script, alors les script va vous demander de selectionner des chiffres à l'aide du senseHat. Qaund vous avez entré vos chiffres, il suffit d'enfoncer le joystick durant qqe secondes pour valider votre choix. Ensuite vous devez entrée une suite de positions du sense hat et/ou du joystick. Pour valider une position du sense hat, il faut appuyer sur le joystick. Pour enregistrer une position du joystick, il suffit de le bouger dans la direction voulu. Il n'est pas possible d'enregistrer l'action appuyer du joystick car elle sert à valider une position du sense hat. Pour chaque positions enregistrées,une led s'allumera. Pour finaliser votre sequence, il suffit d'enfoncer le joystick pendant quelques secondes.
 
