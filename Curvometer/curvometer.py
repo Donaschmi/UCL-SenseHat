@@ -9,24 +9,21 @@ import subprocess
 
 sense = SenseHat()
 
-index_x = 0 # The current x-pos of the top_left pixel
-default_index_x = 0
+index_x = 0 # The current x-pos of the most left pixel
 width = 0 # Equals the number of samples collected
 prev_index = -1
-displayed_data = "temp"
-state = "collecting"
-debug = True
 min_temp  = 99
 max_temp = 0
 min_humid  = 99
 max_humid = 0
 
-
+# Color codes
 R = [255, 0, 0]
 G = [127, 255, 0]
 B = [0, 0, 255]
 O = [0, 0, 0]
 
+# 3 * 5 number representation
 ZERO = [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]]
 ONE = [[0,1,0],[0,1,0],[0,1,0],[0,1,0],[0,1,0]]
 TWO = [[1,1,1],[0,0,1],[0,1,0],[1,0,0],[1,1,1]]
@@ -40,7 +37,7 @@ NINE = [[1,1,1],[1,0,1],[1,1,1],[0,0,1],[0,0,1]]
 
 NUMS = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE]
 
-
+# Top indicator
 H_MAX = [[O,B,O,B,O,O,B,O],
         [O,B,B,B,O,B,O,B],
         [O,B,O,B,O,O,O,O]]
@@ -57,7 +54,11 @@ T_MIN = [[O,R,R,R,O,R,O,R],
         [O,O,R,O,O,O,R,O],
         [O,O,R,O,O,O,O,O]]
 
-top_display = {"h_max": H_MAX, "h_min": H_MIN, "t_max": T_MAX, "t_min": T_MIN}
+# Different screens displayed
+STATES = ["temp", "h_min", "h_max", "humid", "t_min", "t_max"]
+index_state = 0
+
+TOP_DISPLAY = {"h_max": H_MAX, "h_min": H_MIN, "t_max": T_MAX, "t_min": T_MIN}
 
 def humidex(temp, humid):
     """
@@ -146,7 +147,7 @@ def display(tab):
     for i in range(8):
         for j in range(8):
             if tab[i][j] == 1:
-                sense.set_pixel(i, j, 255, 0, 0) if displayed_data == "temp" else sense.set_pixel(i, j, 0, 0, 255)
+                sense.set_pixel(i, j, 255, 0, 0) if STATES[index_state] == "temp" else sense.set_pixel(i, j, 0, 0, 255)
             else:
                 sense.set_pixel(i, j, 0, 0, 0)
 
@@ -181,24 +182,15 @@ def pressed_right(event):
     global index_x
     if event.action != ACTION_RELEASED:
         # We can't get past the (8 - width) index or else we are out of boundary
-        index_x = 0 if min(index_x + 1, width - 8) < 0 else min(index_x + 1, width - 8)
+        index_x = max(0, min(index_x + 1, width - 8))
+
 
 def pressed_middle(event):
-    global index_x, displayed_data, state, debug
+    global index_x, index_state
     if event.action == ACTION_RELEASED:
-        if displayed_data == "humid":
-            displayed_data = "t_min"
-        elif displayed_data == "t_min":
-            displayed_data = "t_max"
-        elif displayed_data == "t_max":
-            displayed_data = "temp"
-        elif displayed_data == "temp":
-            displayed_data = "h_min"
-        elif displayed_data == "h_min":
-            displayed_data = "h_max"
-        elif displayed_data == "h_max":
-            displayed_data = "humid"
-
+        index_state = (index_state + 1) % len(STATES)
+        # Replace the display on the most recent data
+        index_x = max(0, width - 8)
     sense.clear()
 
 # Mount the stick
@@ -206,7 +198,7 @@ sense.stick.direction_left = pressed_left
 sense.stick.direction_right = pressed_right
 sense.stick.direction_middle = pressed_middle
 
-def create_curve(data_tab, type):
+def create_curve(data_tab, state):
     """
     Create a list of arrays where each array is a column containing exactly one "1"
     which is the the value at the index in data_tab
@@ -241,22 +233,20 @@ def create_curve(data_tab, type):
     min_data, max_data = min_max(data_tab, len(data_tab))
     min_max_diff = max(8, max_data - min_data)
 
-    if type == "temp":
+    # Update min/max values of each curve
+    if state == "temp":
         min_temp = min(min_data, min_temp)
         max_temp = max(max_data, max_temp)
-    elif type == "humid":
+    elif state == "humid":
         min_humid = min(min_data, min_humid)
         max_humid = max(max_data, max_humid)
 
     width = len(data_tab)
     normalized_data = [None] * width
 
+    # Normalize the curve so it is more fluid
     for i in range(len(data_tab)):
         normalized_data[i] = ((data_tab[i] - min_data)*7) / min_max_diff
-
-
-    full_data_tab = []
-
 
     full_data_tab = [[0 for x in range(8)] for y in range(width)]
 
@@ -285,11 +275,23 @@ def create_curve(data_tab, type):
         prev_index = curr_index
         # END OF BLOCK TO COMMENT
 
-
     return full_data_tab
 
 def display_number(number1, number2):
-    top = top_display[displayed_data]
+    """
+    Display the two numbers on the 5 bottom lines of the screen and an
+    indicator of which data is displayed
+
+    Parameters
+    ----------
+    number1, number2: int[][]
+        Valid 3*5 double_entry lists containing the number to display
+
+    Returns
+    -------
+    /
+    """
+    top = TOP_DISPLAY[STATES[index_state]]
     ret_tab = [O]*64
     for i in range(8):
         for j in range(3):
@@ -300,36 +302,34 @@ def display_number(number1, number2):
             ret_tab[8 * (j+3) + i+5] = [255, 255, 255] if number2[j][i] == 1 else [0, 0, 0]
     sense.set_pixels(ret_tab)
 
+def main():
+    # Contains  the data
+    temp = []
+    humid = []
+    humidex_tab = []
+    curr_time = time()
 
-temp = []
-humid = []
-curr_time = time()
+    curve_temp = []
+    curve_humid = []
+    while True:
+        if time() - curr_time > 1:
+            temp.append(sense.temperature)
+            humid.append(sense.humidity)
 
-full_temp_tab = []
-full_humid_tab = []
-humidex_tab = []
-while True:
-    if time() - curr_time > 1:
-        temp.append(sense.temperature)
-        humid.append(sense.humidity)
+            humidex_tab.append(treat_data(temp[len(temp)-1], humid[len(humid)-1]))
+            curve_humid = create_curve(humid, "humid")
+            curve_temp = create_curve(humidex_tab, "temp")
+            curr_time = time()
+        if STATES[index_state] == "h_max":
+            display_number(NUMS[int(max_humid / 10)], NUMS[int(max_humid % 10)])
+        elif STATES[index_state] == "h_min":
+            display_number(NUMS[int(min_humid / 10)], NUMS[int(min_humid % 10)])
+        elif STATES[index_state] == "t_max":
+            display_number(NUMS[int(max_temp / 10)], NUMS[int(max_temp % 10)])
+        elif STATES[index_state] == "t_min":
+            display_number(NUMS[int(min_temp / 10)], NUMS[int(min_temp % 10)])
+        else:
+            current_curve = curve_temp if STATES[index_state] == "temp" else curve_humid
+            display(current_display(current_curve))
 
-        humidex_tab.append(treat_data(temp[len(temp)-1], humid[len(humid)-1]))
-        full_humid_tab = create_curve(humid, "humid")
-        full_temp_tab = create_curve(humidex_tab, "temp")
-        curr_time = time()
-    if displayed_data == "h_max":
-        display_number(NUMS[int(max_humid / 10)], NUMS[int(max_humid % 10)])
-    elif displayed_data == "h_min":
-        display_number(NUMS[int(min_humid / 10)], NUMS[int(min_humid % 10)])
-    elif displayed_data == "t_max":
-        display_number(NUMS[int(max_temp / 10)], NUMS[int(max_temp % 10)])
-    elif displayed_data == "t_min":
-        display_number(NUMS[int(min_temp / 10)], NUMS[int(min_temp % 10)])
-    else:
-        current_tab = full_temp_tab if displayed_data == "temp" else full_humid_tab
-        display(current_display(current_tab))
-
-    # Continuously display the current tab while listening to joystick events
-    if state == "done":
-        sense.clear()
-        break
+main()
