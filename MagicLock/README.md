@@ -11,6 +11,8 @@ Le magic-lock est un moyen de cacher un message secret. Pour déverrouiller l'ap
 
 Les positions valides sont les suivantes :
 
+![image](color_helper.png)
+
 **{'z': 1, 'x': 0, 'y': 0} => orange => HAUT**
 
 **{'z': -1, 'x': 0, 'y': 0} => grey => BAS**
@@ -54,6 +56,8 @@ Si un fichier __secretKey.txt__ existe dans le même répertoire où se trouve l
 
 Nous avons départagé le projet en deux parties : le cryptage et le decryptage. Cela nous a pris plus  ou moins 2h30 pour le cryptage et 3h pour le décryptage plus 2h30 pour merge les deux parties et rendre le programme 100% utilisable.
 
+Version 2: Il nous a fallu 4h en plus pour rajouter la possibilité de selectionner le message avec le **numberpicker** et améliorer le design.
+
 ### Emulation
 
 Le logiciel d'**émulation de Trinket.io** ne permettant pas d'utiliser les utilitaires de fichiers, il n'est possible de tester le code seulement avec des données *hard-codée*.
@@ -64,8 +68,6 @@ Pour le logiciel **stand-alone sense_emu**, cela fonctionne bien. Il est possibl
 
 Voici quelques extensions faisables. Les étoiles représentent la difficulté sur une échelle de &ast; (facile) à &ast;&ast;&ast; (difficle).
 
-* Limiter le nombre d'essai pour déverrouiller dans la partie décryptage (&ast;)
-* Selection du message à enregistrer avec joystick et écran LED pour la partie cryptage (&ast;&ast;&ast;)
 * Stocker la combinaison et le message autre part que dans un fichier txt (&ast;&ast;)
 * Permettre de reset le message secret (&ast;&ast;)
 * Input text characters only with RPI (&ast;&ast;)

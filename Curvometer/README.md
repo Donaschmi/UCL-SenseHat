@@ -39,7 +39,6 @@ La deuxième partie consiste à transformer les données en un tableau de 8 * nb
 
 La troisième partie partie permettant d'afficher la courbe et de pouvoir se déplacer le long de celle-ci a pris plus-ou-moins 2h.
 
-
 ### Emulation
 Aucuns soucis à émuler ce programme grâce à Trinket.io vu la possibilité de changer les données en temps réel.
 
