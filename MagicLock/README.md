@@ -2,9 +2,9 @@
 
 # Fichiers
 
-`magiclock.py` : Script de l'encodeur/décodeur de message secret
-
-`numberpicker.py` : Script permettant d'afficher des numéro de 0 à 9 et de les sélectionner avec le joystick
+* __magiclock.py__ : Script de l'encodeur/décodeur de message secret
+* __numberpicker.py__ : Script permettant d'afficher des numéro de 0 à 9 et de les sélectionner avec le joystick
+* __README.md__: ce ficheir ci
 
 ## MagicLock
 Le magic-lock est un moyen de cacher un message secret. Pour déverrouiller l'appareil et lire le message, l'utilisateur doit pivoter le raspberry dans une position et la valider à l'aide du joystick. Il peut aussi utiliser la direction du joystick comme 'position'. Si la position correspond à celle demandée, ce verrou est déverouillé. Le nombre de combinaison à réaliser dans l'ordre est compris entre 1 et 64 et est choisi par la personne cryptant le message.
