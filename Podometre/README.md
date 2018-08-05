@@ -5,7 +5,7 @@
 * __podometre.py__: lance un podomètre simple qui va compter vos pas en temps réelle. Pour l'arrêter il suffit d'appuyer sur le joystick. Le nombre de pas effectué restera afficher. (Mettre la partie USB du raspberry dans votre poche)
 * __podo_display.py__: contient des méthodes pour l'affichage de numéros (0-99) sur le sense hat LED panel (utiliser dans podov2.py, podometre.py et podo_goal.py
 * __podo_goal.py__: lance un selectionneur de numéro qui définira le nombre de pas a effectué. Qaund le nombre de pas est atteind, pour avez acces à un graph de la température enregistré durant la marche et de l'humidité.
-* __podov2.py__: lance le podomètre. Quand on l'arrête, on peut changer de vue (graphe température, graphe humidité, nombre de pas) en appuyant sur le joystick
+* __podov2.py__: lance le podomètre et l'enregistrement de la température et d'humidité. Il y a un graphe de la température, de l'humidité et du nombres de pas effectué. Les mesures de pas et des paramètre sont fait en temps réel. Pour changer de vue, il suffit d'appuyer sur le joystick. Servez vous de la direction du joystick pour manoeuvrer sur le graphe. Il existe aussi 2 vues qui donne la valeur maximal et minimal de la température et de l'humidité (indiqué par un 'T' ou 'H' suivi d'un '^' ou 'v' pour maximum et minimum).
 * __findPeaks.py__: Fichier avec des fonctions simple pour détecter des pics deans des tableaux 1D (pas utiliser)
 * __README.md__: Ce fichier ci
 * __exp_data__: dossier avec des fichiers .hat qui contienne 10s de données capteur du sense hat. (+- 23 pas) Utile avec les commande sense_play de la librairie sense_emu pour tester.
