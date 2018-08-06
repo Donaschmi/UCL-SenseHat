@@ -1,15 +1,12 @@
 from sense_hat import SenseHat,ACTION_RELEASED,ACTION_PRESSED,ACTION_HELD
 from time import sleep,time
 from math import pow,sqrt, log, exp
-from podo_display import display_number
 import sys
 import subprocess
 
 # Setup
 sense = SenseHat()
 sense.low_light = True
-temp_data = []
-humid_data = []
 
 ZERO = [[1,1,1],[1,0,1],[1,0,1],[1,0,1],[1,1,1]]
 ONE = [[0,1,0],[0,1,0],[0,1,0],[0,1,0],[0,1,0]]
@@ -26,160 +23,133 @@ NUMS = [ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE]
 
 ARROW = [[1, 1, 1],[0, 1, 0]]
 
-index = 0
-message = ""
+
+index_x = 0 # The current x-pos of the most left pixel
+width = 0 # Equals the number of samples collected
+prev_index = -1
+
+# Default values, update at each loop
+min_temp  = 99
+max_temp = 0
+min_humid  = 99
+max_humid = 0
+
+
+R = [255, 0, 0] 	# Red color
+G = [127, 255, 0] 	# Green color
+B = [0, 0, 255]     # Blue color
+O = [0,0,0]			# no Color
+
+# Top indicator
+H_MAX = [[O,B,O,B,O,O,B,O],
+        [O,B,B,B,O,B,O,B],
+        [O,B,O,B,O,O,O,O]]
+
+H_MIN = [[O,B,O,B,O,B,O,B],
+        [O,B,B,B,O,O,B,O],
+        [O,B,O,B,O,O,O,O]]
+
+T_MAX = [[O,R,R,R,O,O,R,O],
+        [O,O,R,O,O,R,O,R],
+        [O,O,R,O,O,O,O,O]]
+
+T_MIN = [[O,R,R,R,O,R,O,R],
+        [O,O,R,O,O,O,R,O],
+        [O,O,R,O,O,O,O,O]]
+
+PODO = [[O,O,G,O,O,G,O,O],
+        [O,O,G,O,O,G,O,O],
+        [O,O,G,G,O,G,G,O]]
+
+FINISHED = 	[O,O,O,O,O,O,O,O,
+			O,O,O,O,O,O,O,O,
+			O,O,O,O,O,O,O,G,
+			O,O,O,O,O,O,G,G,
+			O,G,O,O,O,G,O,G,
+			O,O,G,O,G,O,O,O,
+			O,O,O,G,O,O,O,O,
+			O,O,O,O,O,O,O,O]
+
+# Different screens displayed
+STATES = ["podo", "t_min", "t_max", "temp", "h_min", "h_max", "humid"]
+index_state = 0 # Default is podo
+
+TOP_DISPLAY = {"h_max": H_MAX, "h_min": H_MIN, "t_max": T_MAX, "t_min": T_MIN, "podo": PODO}
+
+
+index_picker = 0
+step_count_picker = ""
 coding = True
 select = False
 
-C = [255,0,0]
 
-def display_number_2(number1, number2):
-	for i in range(3):
-		for j in range(5):
-			sense.set_pixel(i+1, j+3, [255, 255, 255]) if number1[j][i] == 1 else sense.set_pixel(i+1, j+3, [0, 0, 0])
-			sense.set_pixel(i+5, j+3, [255, 255, 255]) if number2[j][i] == 1 else sense.set_pixel(i+5, j+3, [0, 0, 0])
-	offset = 0
-	if index % 2 == 1:
-		offset = 4
-	for i in range(3):
-		for j in range(2):
-			sense.set_pixel(i+1+offset, j, [C[0], C[1], C[2]])if ARROW[j][i] == 1 else sense.set_pixel(i+1+offset, j, [0, 0, 0])
+def display_number_picker(number1, number2):
+    """
+    Display number from 0 to 9 with an arrow on top of the selected number
+    """
+    for i in range(3):
+        for j in range(5):
+            sense.set_pixel(i+1, j+3, [255, 255, 255]) if number1[j][i] == 1 else sense.set_pixel(i+1, j+3, [0, 0, 0])
+            sense.set_pixel(i+5, j+3, [255, 255, 255]) if number2[j][i] == 1 else sense.set_pixel(i+5, j+3, [0, 0, 0])
+    offset = 0
+    if index_picker % 2 == 1:
+        offset = 4
+    for i in range(3):
+        for j in range(2):
+            sense.set_pixel(i+1+offset, j, [R[0], R[1], R[2]])if ARROW[j][i] == 1 else sense.set_pixel(i+1+offset, j, [0, 0, 0])
 
-def pressed_right(event):
-    global index
+def pressed_right_picker(event):
+    global index_picker
     if event.action != ACTION_PRESSED:
-        index = (index + 1) % 10
+        index_picker = (index_picker + 1) % 10
         sense.clear()
 
-def pressed_left(event):
-    global index
+def pressed_left_picker(event):
+    global index_picker
     if event.action != ACTION_PRESSED:
-        index = (index + 9) % 10
+        index_picker = (index_picker + 9) % 10
         sense.clear()
 
-def pressed_middle(event):
-	global coding,select
-	if event.action == ACTION_RELEASED:
-		global message
-		message += str(index)
-		select = True
-		coding = False
-		sleep(0.4)
-		coding = True
-		select = False
-		print(message)
-	elif event.action == ACTION_HELD:
-		coding = False
+def pressed_middle_picker(event):
+    global coding,select
+    if event.action == ACTION_RELEASED:
+        global step_count_picker
+        step_count_picker += str(index_picker)
+        # Change color of index indicator
+        select = True
+        coding = False
+        sleep(0.4)
+        coding = True
+        select = False
+    elif event.action == ACTION_HELD:
+        coding = False
 
-def change_color():
-	global index
-	offset = 0
-	if index % 2 == 1:
-		offset = 4
-	for i in range(3):
-		for j in range(2):
-			sense.set_pixel(i+1+offset, j, [100, 100, 200])if ARROW[j][i] == 1 else sense.set_pixel(i+1+offset, j, [0, 0, 0])
-
-
-sense.stick.direction_right = pressed_right
-sense.stick.direction_left = pressed_left
-sense.stick.direction_middle = pressed_middle
-sense.clear()
-while True:
-    if coding:
-        display_number_2(NUMS[index], NUMS[index+1]) if index % 2 == 0 else display_number_2(NUMS[index - 1], NUMS[index])
-    elif select:
-    	change_color()
-    elif not coding and not select:
-        sense.show_message(message)
-        break
-
-message = message[:-1]
+def change_color_arrow():
+    """
+    Change the color of the index indicator for a brief moment when selected
+    """
+    global index_picker
+    offset = 0
+    if index_picker % 2 == 1:
+        offset = 4
+    for i in range(3):
+        for j in range(2):
+            sense.set_pixel(i+1+offset, j, [100, 100, 200])if ARROW[j][i] == 1 else sense.set_pixel(i+1+offset, j, [0, 0, 0])
 
 """
 Function that returns 1 if previous_elem <= element else -1
 """
 def direction(previous_elem, element):
-	if (previous_elem > element):
-		return -1 # descending direction
-	else:
-		return 1
-
-"""
-Function that sets the loop condition to false
-"""
-def stop():
-	global infinite
-	infinite = 0
-
+    if (previous_elem > element):
+        return -1 # descending direction
+    else:
+        return 1
 
 # Colors
-R = [255, 0, 0]		# Red
-G = [127, 255, 0]	# Green
-X = [0,0,0]			# None
-step_count = int(message) 		# TODO: import from select display LED
-
-Finished = 	[X,X,X,X,X,X,X,X,
-			X,X,X,X,X,X,X,X,
-			X,X,X,X,X,X,X,G,
-			X,X,X,X,X,X,G,G,
-			X,G,X,X,X,G,X,G,
-			X,X,G,X,G,X,X,X,
-			X,X,X,G,X,X,X,X,
-			X,X,X,X,X,X,X,X]
-
-
-prev_mag = 0.0		# Previous magnitude value
-prev_direction = 1	# Previous direction value
-threshold = 1.37	# threshold value: if mag > => then step++
-infinite = True		# condition of main loop
-
-
-# display step_count at start
-display_number(step_count)
-
-# set stop action by touching the joystick
-sense.stick.direction_any = stop
-
-cycle_time = time()
-# infinite loop, stopped on any joystick move
-while infinite:
-
-	acc = sense.get_accelerometer_raw()
-	x = acc['x']
-	y = acc['y']
-	z = acc['z']
-
-	mag = sqrt(pow(x,2)+pow(y,2)+pow(z,2)) # Calculate magnitude
-
-	cur_direction = direction(prev_mag,mag)
-	if cur_direction != prev_direction: # see if peak
-
-		if (prev_direction == 1 and prev_mag > threshold): # check if above some threshold and previous direction was up
-			step_count -= 1
-			display_number(step_count)
-
-	if (step_count <= 0):
-		break
-	# update variables
-	prev_mag = mag
-	prev_direction = cur_direction
-
-	if time() - cycle_time > 1:
-		temp_data.append(sense.temp)
-		humid_data.append(sense.humidity)
-		cycle_time = time()
-
-	sleep(0.018) # delay between 2 measures
-
-# Clean before exit
-sense.clear()
-sense.set_pixels(Finished)
-sleep(2)
-index_x = 0 # The current x-pos of the top_left pixel
-width = 0 # Equals the number of samples collected
-prev_index = -1
-displayed_data = "humid"
+R = [255, 0, 0] 	# Red color
+G = [127, 255, 0] 	# Green color
+B = [0, 0, 255]     # Blue color
+O = [0,0,0]			# no Color
 
 def humidex(temp, humid):
     """
@@ -226,32 +196,27 @@ def correct_temp(temp_tab):
     """
     output = subprocess.check_output("cat /sys/class/thermal/thermal_zone0/temp", shell=True)
     cpu_temp = int(output)/1000
-    temp_calibrated = [None] * len(temp_tab)
-    for i in range(len(temp_tab)):
-        temp_calibrated[i] = temp_tab[i] - ((cpu_temp - temp_tab[i]/1.5))
+    temp_calibrated = temp_tab - ((cpu_temp - temp_tab)/1.5)
     return temp_calibrated
 
-def treat_data(temp_tab, humid_tab):
+def treat_data(temp, humid):
     """
     Transform each temperature into humidex
 
     Parameters
     ----------
-    temp_tab: float[]
-        Temperature samples
-    humid_tab: float[]
-        Humidity samples
+    temp_tab: float
+        Temperature sample
+    humid_tab: float
+        Humidity sample
 
     Returns
     -------
-    new_humidex: float[]
-        New Humidex values
+    new_humidex: float
+        New Humidex value
     """
-    length = len(temp_tab)
-    new_humidex = [None] * length
-    new_temp_tab = correct_temp(temp_tab)
-    for i in range(length):
-        new_humidex[i] = humidex(new_temp_tab[i], humid_tab[i])
+    new_temp_tab = correct_temp(temp)
+    new_humidex = humidex(new_temp_tab, humid)
     return new_humidex
 
 def display(tab):
@@ -273,7 +238,7 @@ def display(tab):
     for i in range(8):
         for j in range(8):
             if tab[i][j] == 1:
-                sense.set_pixel(i, j, 255, 0, 0) if displayed_data == "temp" else sense.set_pixel(i, j, 0, 0, 255)
+                sense.set_pixel(i, j, 255, 0, 0) if STATES[index_state] == "temp" else sense.set_pixel(i, j, 0, 0, 255)
             else:
                 sense.set_pixel(i, j, 0, 0, 0)
 
@@ -298,30 +263,27 @@ def current_display(tab):
             ret_tab[i][j] = tab[i + index_x][j]
     return ret_tab
 
-def pressed_left(event):
+def pressed_left_display(event):
     global index_x
     if event.action != ACTION_RELEASED:
         # We can't get behind index 0
         index_x = max(0, index_x - 1)
-        print(index_x)
 
-def pressed_right(event):
+def pressed_right_display(event):
     global index_x
     if event.action != ACTION_RELEASED:
         # We can't get past the (8 - width) index or else we are out of boundary
         index_x = 0 if min(index_x + 1, width - 8) < 0 else min(index_x + 1, width - 8)
-        print(index_x)
 
-def pressed_middle(event):
-    global index_x, displayed_data, state, debug
-    if event.action == ACTION_RELEASED:
-        if displayed_data == "temp":
-            displayed_data = "humid"
-        elif displayed_data == "humid":
-            displayed_data = "temp"
+def pressed_middle_display(event):
+        global index_x, index_state, loop
+        if event.action == ACTION_RELEASED:
+            index_state = (index_state + 1) % len(STATES)
+            # Replace the display on the most recent data
+            index_x = max(0, width - 8)
         sense.clear()
 
-def create_curve(data_tab):
+def create_curve(data_tab, state):
     """
     Create a list of arrays where each array is a column containing exactly one "1"
     which is the the value at the index in data_tab
@@ -330,6 +292,8 @@ def create_curve(data_tab):
     ----------
     data_tab: float[]
         The data that will be drawn on the monitor
+    state: String
+        Either "temp" or "humid", specifies which data is beeing processed
 
     Returns
     -------
@@ -337,7 +301,7 @@ def create_curve(data_tab):
         Each list is a column of the full data array; [0,1]
 
     """
-    global height_temp, height_humid, width, index_y, default_index_y_temp, default_index_y_humid, prev_index
+    global width, prev_index, min_temp, max_temp, max_humid, min_humid
 
     def min_max(arr, arr_size):
         """
@@ -352,20 +316,24 @@ def create_curve(data_tab):
                 min_t = arr[i]
         return min_t, max_t
 
-    sense.clear()
     # The max difference between two temp; if greater than 8, then we need to move vertically
     min_data, max_data = min_max(data_tab, len(data_tab))
     min_max_diff = max(8, max_data - min_data)
+
+    # Update min/max values of each curve
+    if state == "temp":
+        min_temp = min(min_data, min_temp)
+        max_temp = max(max_data, max_temp)
+    elif state == "humid":
+        min_humid = min(min_data, min_humid)
+        max_humid = max(max_data, max_humid)
+
+    width = len(data_tab)
 
     normalized_data = data_tab.copy()
 
     for i in range(len(data_tab)):
         normalized_data[i] = ((data_tab[i] - min_data)*7) / min_max_diff
-    print(normalized_data)
-
-    full_data_tab = []
-
-    width = len(data_tab)
 
     full_data_tab = [[0 for x in range(8)] for y in range(width)]
 
@@ -379,14 +347,12 @@ def create_curve(data_tab):
     prev_index = -1
     for i in range(width):
         diff = round(normalized_data[i] - base_data)
-        print(base_index, diff)
         curr_index = base_index - diff
         full_data_tab[i][curr_index] = 1
 
         # COMMENT NEXT FULL BLOCK TO REMOVE VERTICAL PIXELS
         if i > 0:
             delta_index = curr_index - prev_index
-            print(delta_index)
             if delta_index > 1:
                 for j in range(prev_index + 1, curr_index):
                     full_data_tab[i][j] = 1
@@ -399,22 +365,116 @@ def create_curve(data_tab):
 
     return full_data_tab
 
+def display_number(number1, number2):
+    """
+    Display the two numbers on the 5 bottom lines of the screen and an
+    indicator of which data is displayed
 
-humidex_data = treat_data(temp_data, humid_data)
-full_humid_tab = create_curve(humid_data)
-displayed_data = "temp"
-full_temp_tab = create_curve(humidex_data)
+    Parameters
+    ----------
+    number1, number2: int[][]
+        Valid 3*5 double_entry lists containing the number to display
 
-# Mount the stick
-sense.stick.direction_left = pressed_left
-sense.stick.direction_right = pressed_right
-sense.stick.direction_middle = pressed_middle
+    Returns
+    -------
+    /
+    """
+    top = TOP_DISPLAY[STATES[index_state]]
+    ret_tab = [O]*64
+    for i in range(8):
+        for j in range(3):
+            ret_tab[8 * j + i] = top[j][i]
+    for i in range(3):
+        for j in range(5):
+            ret_tab[8 * (j+3) + i+1] = [255, 255, 255] if number1[j][i] == 1 else [0, 0, 0]
+            ret_tab[8 * (j+3) + i+5] = [255, 255, 255] if number2[j][i] == 1 else [0, 0, 0]
+    sense.set_pixels(ret_tab)
 
-while True:
-    # Continuously display the current tab while listening to joystick events
-    if displayed_data == "temp":
-        display(current_display(full_temp_tab))
-    elif displayed_data == "humid":
-        display(current_display(full_humid_tab))
+def main():
+    global step_count_picker, index_state
 
-print("Completed")
+    sense.stick.direction_right = pressed_right_picker
+    sense.stick.direction_left = pressed_left_picker
+    sense.stick.direction_middle = pressed_middle_picker
+    sense.clear()
+
+    while True:
+        if coding:
+            display_number_picker(NUMS[index_picker], NUMS[index_picker+1]) if index_picker % 2 == 0 else display_number_picker(NUMS[index_picker - 1], NUMS[index_picker])
+        elif select:
+            change_color_arrow()
+        elif not coding and not select:
+            sense.show_message(step_count_picker)
+            break
+    step_count_picker = step_count_picker[:-1]
+
+    step_count = int(step_count_picker) 		# TODO: import from select display LED
+    step_count = min(99, step_count) # TODO max is 2 numbers with this display_number function, should be extended
+    prev_mag = 0.0		# Previous magnitude value
+    prev_direction = 1	# Previous direction value
+    threshold = 1.37	# threshold value: if mag > => then step++
+    infinite = True		# condition of main loop
+
+
+    # Mount the stick
+    sense.stick.direction_left = pressed_left_display
+    sense.stick.direction_right = pressed_right_display
+    sense.stick.direction_middle = pressed_middle_display
+
+    temp = []
+    humid = []
+    humidex_tab = []
+    curve_temp = []
+    curve_humid = []
+
+    cycle_time = time()
+    # infinite loop, stopped on any joystick move
+    while True:
+
+        acc = sense.get_accelerometer_raw() # read acc data
+        x = acc['x']
+        y = acc['y']
+        z = acc['z']
+
+        mag = sqrt(pow(x,2)+pow(y,2)+pow(z,2)) # Calculate magnitude
+
+        cur_direction = direction(prev_mag,mag)# get current direction
+        if cur_direction != prev_direction: # see if peak
+
+            if (prev_direction == 1 and prev_mag > threshold): # check peak type (up,down) and if above some threshold
+                step_count -= 1
+                if step_count == 0:
+                    index_state = 0
+                    sense.set_pixels(FINISHED)
+        # update variables
+        prev_mag = mag
+        prev_direction = cur_direction
+
+        # Collect temp/humid every sec
+        if time() - cycle_time > 1:
+            temp.append(sense.temperature)
+            humid.append(sense.humidity)
+            humidex_tab.append(treat_data(temp[len(temp)-1], humid[len(humid)-1]))
+            curve_humid = create_curve(humid, "humid")
+            curve_temp = create_curve(humidex_tab, "temp")
+            cycle_time = time()
+        if STATES[index_state] == "h_max":
+            display_number(NUMS[int(max_humid / 10)], NUMS[int(max_humid % 10)])
+        elif STATES[index_state] == "h_min":
+            display_number(NUMS[int(min_humid / 10)], NUMS[int(min_humid % 10)])
+        elif STATES[index_state] == "t_max":
+            display_number(NUMS[int(max_temp / 10)], NUMS[int(max_temp % 10)])
+        elif STATES[index_state] == "t_min":
+            display_number(NUMS[int(min_temp / 10)], NUMS[int(min_temp % 10)])
+        elif STATES[index_state] == "podo":
+            if step_count <= 0:
+                sense.set_pixels(FINISHED)
+            else:
+                display_number(NUMS[int(step_count / 10)], NUMS[int(step_count % 10)])
+        else:
+            current_curve = curve_temp if STATES[index_state] == "temp" else curve_humid
+            display(current_display(current_curve))
+
+        sleep(0.018) # delay between 2 measures
+
+main()
